@@ -192,91 +192,8 @@ Model LoadStaticModelGLTF( const char* _path ) {
 	//==============//
 	//GET ANIMATIONS // 
 	//==============//
-	if ( json.find( "animations" ) != json.end() ) {
-		for ( int i = 0; i < json["animations"].size(); i++ ) {
-			Animation animation;
-			if ( json["animations"][i].find( "name" ) != json["animations"][i].end() )
-				animation.name = json["animations"][i]["name"];
-			else
-				animation.name = std::to_string(i) + ": No Name";
-			for ( int n = 0; n < json["animations"][i]["channels"].size(); n++ ) {
-				JSON channelJson = json["animations"][i]["channels"][n];
-				
-				AnimChannel* channel = nullptr;
-
-				//First check if a channel already exists with this index, that way it's easier to keep track of
-				for ( int a = 0; a < animation.animChannels.size(); a++ ) {
-					if ( animation.animChannels[a].nodeID == channelJson["target"]["node"] ) {
-						channel = &animation.animChannels[a];
-						break;
-					}
-				}
-
-				//did not find a valid one
-				if ( channel == nullptr ) {
-					AnimChannel a;
-					animation.animChannels.push_back( a );
-					channel = &animation.animChannels[animation.animChannels.size()-1];
-				}
-
-				//AnimChannel channel{ 0 };
-				channel->nodeID = channelJson["target"]["node"];
-
-				int sampler = channelJson["sampler"];
-				JSON samplerJson = json["animations"][i]["samplers"][sampler];
-
-				int inputIndex = samplerJson["input"];
-				Accessor inputAccessor = GetAccessor( json["accessors"][inputIndex] );
-				std::string inputBuffer = GetBinDataFromAccessor( inputAccessor, json["bufferViews"][inputAccessor.bufferView], binContents );
-
-				int outputIndex = samplerJson["output"];
-				Accessor outputAccessor = GetAccessor( json["accessors"][outputIndex] );
-				std::string outputBuffer = GetBinDataFromAccessor( outputAccessor, json["bufferViews"][outputAccessor.bufferView], binContents );
-
-				if ( channelJson["target"]["path"] == "translation" ) {
-					std::vector<float> times(inputAccessor.count);
-					memcpy( times.data(), inputBuffer.data(), times.size() * sizeof( float ) );
-					std::vector<glm::vec3> translations(outputAccessor.count);
-					memcpy( translations.data(), outputBuffer.data(), translations.size() * sizeof( glm::vec3 ) );
-					
-					channel->translations.resize( inputAccessor.count );
-					for ( int t = 0; t < channel->translations.size(); t++ ) {
-						channel->translations[t].time = times[t];
-						channel->translations[t].translation = translations[t];
-					}
-				}
-				else if ( channelJson["target"]["path"] == "scale" ) {
-					std::vector<float> times( inputAccessor.count );
-					memcpy( times.data(), inputBuffer.data(), times.size() * sizeof( float ) );
-					std::vector<glm::vec3> scales( outputAccessor.count );
-					memcpy( scales.data(), outputBuffer.data(), scales.size() * sizeof( glm::vec3 ) );
-
-					channel->scales.resize( inputAccessor.count );
-					for ( int t = 0; t < channel->translations.size(); t++ ) {
-						channel->scales[t].time = times[t];
-						channel->scales[t].scale = scales[t];
-					}
-				}
-				else if ( channelJson["target"]["path"] == "rotation" ) {
-					std::vector<float> times( inputAccessor.count );
-					memcpy( times.data(), inputBuffer.data(), times.size() * sizeof( float ) );
-					std::vector<glm::vec4> rotations( outputAccessor.count );
-					memcpy( rotations.data(), outputBuffer.data(), rotations.size() * sizeof( glm::quat) );
-						
-					channel->rotations.resize( inputAccessor.count );
-					for ( int t = 0; t < channel->rotations.size(); t++ ) {
-						channel->rotations[t].time = times[t];
-						channel->rotations[t].rotaiton = glm::quat(rotations[t].w, rotations[t].x, rotations[t].y, rotations[t].z);
-					}
-				}
-
-				//animation.animChannels.push_back( channel );
-			}
-
-			model.animations.push_back( animation );
-		}
-	}
-
+	//model.animations.push_back(LoadAnimation(_path));
+	LoadAnimations( _path );
 	//==============//
 	//GENERATE MESHES
 	//==============//
@@ -478,6 +395,109 @@ Model LoadStaticModelGLTF( const char* _path ) {
 	return model;
 }
 
+void LoadAnimations( const char* _path ) {
+	std::string path = _path;
+	std::string fileContent = FileContentToString( path );
+	JSON json = JSON::parse( fileContent );
+
+	std::string directory = path.substr( 0, path.find_last_of( "/" ) + 1 );
+	std::string binPath = directory;
+	binPath += json["buffers"][0]["uri"];
+	unsigned int binSize = json["buffers"][0]["byteLength"];
+	std::string binContents = FileContentToString( binPath );
+
+
+	if ( json.find( "animations" ) != json.end() ) {
+		for ( int i = 0; i < json["animations"].size(); i++ ) {
+			//Animation animation;
+			std::string name = "no name";
+
+			if ( json["animations"][i].find( "name" ) != json["animations"][i].end() )
+				name = json["animations"][i]["name"];
+			
+			//Skip over animation if it already exists inside of the manager (NOTE: could be overlap with differnet models withs ame name)
+			if ( ResourceManager::Get().ContainsAnimation( name ) )
+				continue;
+
+			else
+				ResourceManager::Get().CreateAnimation( _path );
+			Animation& animation = *ResourceManager::Get().GetAnimation( _path );
+
+
+			for ( int n = 0; n < json["animations"][i]["channels"].size(); n++ ) {
+				JSON channelJson = json["animations"][i]["channels"][n];
+
+				AnimChannel* channel = nullptr;
+
+				//First check if a channel already exists with this index, that way it's easier to keep track of
+				for ( int a = 0; a < animation.animChannels.size(); a++ ) {
+					if ( animation.animChannels[a].nodeID == channelJson["target"]["node"] ) {
+						channel = &animation.animChannels[a];
+						break;
+					}
+				}
+
+				//did not find a valid one
+				if ( channel == nullptr ) {
+					AnimChannel a;
+					animation.animChannels.push_back( a );
+					channel = &animation.animChannels[animation.animChannels.size() - 1];
+				}
+
+				//AnimChannel channel{ 0 };
+				channel->nodeID = channelJson["target"]["node"];
+
+				int sampler = channelJson["sampler"];
+				JSON samplerJson = json["animations"][i]["samplers"][sampler];
+
+				int inputIndex = samplerJson["input"];
+				Accessor inputAccessor = GetAccessor( json["accessors"][inputIndex] );
+				std::string inputBuffer = GetBinDataFromAccessor( inputAccessor, json["bufferViews"][inputAccessor.bufferView], binContents );
+
+				int outputIndex = samplerJson["output"];
+				Accessor outputAccessor = GetAccessor( json["accessors"][outputIndex] );
+				std::string outputBuffer = GetBinDataFromAccessor( outputAccessor, json["bufferViews"][outputAccessor.bufferView], binContents );
+
+				if ( channelJson["target"]["path"] == "translation" ) {
+					std::vector<float> times( inputAccessor.count );
+					memcpy( times.data(), inputBuffer.data(), times.size() * sizeof( float ) );
+					std::vector<glm::vec3> translations( outputAccessor.count );
+					memcpy( translations.data(), outputBuffer.data(), translations.size() * sizeof( glm::vec3 ) );
+
+					channel->translations.resize( inputAccessor.count );
+					for ( int t = 0; t < channel->translations.size(); t++ ) {
+						channel->translations[t].time = times[t];
+						channel->translations[t].translation = translations[t];
+					}
+				}
+				else if ( channelJson["target"]["path"] == "scale" ) {
+					std::vector<float> times( inputAccessor.count );
+					memcpy( times.data(), inputBuffer.data(), times.size() * sizeof( float ) );
+					std::vector<glm::vec3> scales( outputAccessor.count );
+					memcpy( scales.data(), outputBuffer.data(), scales.size() * sizeof( glm::vec3 ) );
+
+					channel->scales.resize( inputAccessor.count );
+					for ( int t = 0; t < channel->translations.size(); t++ ) {
+						channel->scales[t].time = times[t];
+						channel->scales[t].scale = scales[t];
+					}
+				}
+				else if ( channelJson["target"]["path"] == "rotation" ) {
+					std::vector<float> times( inputAccessor.count );
+					memcpy( times.data(), inputBuffer.data(), times.size() * sizeof( float ) );
+					std::vector<glm::vec4> rotations( outputAccessor.count );
+					memcpy( rotations.data(), outputBuffer.data(), rotations.size() * sizeof( glm::quat ) );
+
+					channel->rotations.resize( inputAccessor.count );
+					for ( int t = 0; t < channel->rotations.size(); t++ ) {
+						channel->rotations[t].time = times[t];
+						channel->rotations[t].rotaiton = glm::quat( rotations[t].w, rotations[t].x, rotations[t].y, rotations[t].z );
+					}
+				}
+			}
+		}
+	}
+}
 
 Texture LoadTexture( const char* path, TextureType type ) {
 

@@ -67,7 +67,6 @@ public:
 	std::vector<Node>		nodes;
 	std::vector<Mesh>		meshes;
 	Skin*					skin;
-	std::vector<Animation>	animations;
 	int						rootNode;
 
 };

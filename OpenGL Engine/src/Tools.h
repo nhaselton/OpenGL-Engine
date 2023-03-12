@@ -3,5 +3,6 @@
 #include "Model.h"
 #include "Texture.h"
 
-Model LoadStaticModelGLTF( const char* path );
-Texture LoadTexture( const char* path ,TextureType textureType);
+Model			LoadStaticModelGLTF( const char* path );
+void			LoadAnimations( const char* path );
+Texture			LoadTexture( const char* path, TextureType textureType );

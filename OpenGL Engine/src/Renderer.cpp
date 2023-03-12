@@ -143,7 +143,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 			continue;
 
 
-		ComputeHierarchy( &entities[m].model->animations[0], 0, &entities[m].model->nodes[entities[m].model->rootNode] );
+		ComputeHierarchy( nullptr, 0, &entities[m].model->nodes[entities[m].model->rootNode] );
 		DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
 	}
 

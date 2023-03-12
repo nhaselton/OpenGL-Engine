@@ -16,8 +16,12 @@ Model* ResourceManager::GetModel( const char* path ) {
 	}
 }
 
-Animation* GetAnimation( std::string path ) {
+Animation* ResourceManager::GetAnimation( std::string path ) {
+	if ( animationMap.find( path ) != animationMap.end() )
+		return &animationMap[path];
 
+	std::cout << "animation " << path << " not found" << std::endl;
+	return nullptr;
 }
 
 Texture* ResourceManager::GetTexture( std::string path) {

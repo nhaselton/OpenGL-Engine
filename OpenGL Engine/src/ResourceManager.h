@@ -12,7 +12,8 @@ public:
 	Texture* GetTexture(std::string path);
 	Animation* GetAnimation( std::string path );
 	static ResourceManager& Get() { return instance; }
-
+	bool ContainsAnimation( std::string path ) { return ( animationMap.find( path ) != animationMap.end() ); }
+	void CreateAnimation( std::string path ) { Animation a; animationMap[path.c_str()] = a; }//create animation and do nothing 
 private:
 	ResourceManager();
 	static ResourceManager instance;
