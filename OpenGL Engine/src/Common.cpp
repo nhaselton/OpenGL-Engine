@@ -51,7 +51,7 @@ void Common::Init() {
 
 	Entity e3;
 	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin.gltf" );
-	e3.model = ResourceManager::Get().GetModel( "res/models/gltf/ron.gltf" );
+	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/ron.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin_2.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/BrainStem.gltf" );
 	

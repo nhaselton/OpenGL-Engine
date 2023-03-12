@@ -21,22 +21,24 @@ Renderer::Renderer() {
 	showSpecularMap = true;
 }
 
-void ComputeHierarchy(  Animation* animation, float time,  Node* node, glm::mat4 parent = glm::mat4(1.0) ){
+void ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) ) {
 	node->computedOffset = node->t.Matrix();//animation offset
-	for ( int i = 0; i < animation->animChannels.size(); i++ ) {
+	if ( animation ) {
 
-		AnimChannel* anim = &animation->animChannels[i];
-		if ( anim->nodeID == node->index && anim->rotations.size() > 0 ){
-			Transform t;
-			t.SetRotation( glm::eulerAngles(glm::quat(anim->rotations[index].rotaiton)) );
-			t.SetPosition( anim->translations[index].translation);
-			t.SetScale( anim->scales[index].scale );
-			node->computedOffset = t.Matrix();
+		for ( int i = 0; i < animation->animChannels.size(); i++ ) {
+			AnimChannel* anim = &animation->animChannels[i];
+			if ( anim->nodeID == node->index && anim->rotations.size() > 0 ) {
+				Transform t;
+				t.SetRotation( glm::eulerAngles( glm::quat( anim->rotations[index].rotaiton ) ) );
+				t.SetPosition( anim->translations[index].translation );
+				t.SetScale( anim->scales[index].scale );
+				node->computedOffset = t.Matrix();
+			}
 		}
 	}
-	
+
 	for ( int i = 0; i < node->children.size(); i++ )
-		ComputeHierarchy( animation, index , node->children[i], node->computedOffset );
+		ComputeHierarchy( animation, index, node->children[i], node->computedOffset );
 }
 
 void Renderer::Init( Window* window, Camera* camera ) {
@@ -87,17 +89,17 @@ void Renderer::BeginFrame() {
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // also clear the depth buffer now!
-	
+
 	shader->Use();
 	shader->SetBool( "showNormalMap", showNormalMap );
-	shader->SetBool( "showSpecularMap", showSpecularMap);
+	shader->SetBool( "showSpecularMap", showSpecularMap );
 
 	//TODO UNIFORM BUFFERS
 	//Send light to shader
-	
+
 	int numPointLights = 0;
 	int numSpotLights = 0;
-	
+
 	for ( int i = 0; i < lights.size(); i++ ) {
 		//Only 1 possible directional light
 		if ( lights[i].lType == LIGHT_DIRECTIONAL ) {
@@ -107,13 +109,13 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 
 		else if ( lights[i].lType == LIGHT_POINT ) {
 			std::string prefix = "pointLights[" + std::to_string( numPointLights++ ) + "].";
-			shader->SetVec3( prefix + "color" , lights[i].color );
-			shader->SetVec3( prefix + "direction", lights[i].direction);
-			shader->SetVec3( prefix + "pos", lights[i].pos);
+			shader->SetVec3( prefix + "color", lights[i].color );
+			shader->SetVec3( prefix + "direction", lights[i].direction );
+			shader->SetVec3( prefix + "pos", lights[i].pos );
 			shader->SetFloat( prefix + "linear", lights[i].linear );
-			shader->SetFloat( prefix + "quadratic", lights[i].quadratic);
-			shader->SetFloat( prefix + "cutoff", lights[i].cutoff);
-			shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff);
+			shader->SetFloat( prefix + "quadratic", lights[i].quadratic );
+			shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
+			shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
 		}
 
 		else if ( lights[i].lType == LIGHT_SPOT ) {
@@ -139,17 +141,17 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	for ( int m = 0; m < entities.size(); m++ ) {
 		if ( entities[m].model == nullptr )
 			continue;
-	
-		
-		ComputeHierarchy( &entities[m].model->animations[0], 0 , &entities[m].model->nodes[entities[m].model->rootNode]);
+
+
+		ComputeHierarchy( &entities[m].model->animations[0], 0, &entities[m].model->nodes[entities[m].model->rootNode] );
 		DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
 	}
 
 	// =========== Draw Lights ============= //
 	lightShader->Use();
 	lightShader->SetMat4( "projection", projection );
-	lightShader->SetMat4( "view", camera->GetView());
-	
+	lightShader->SetMat4( "view", camera->GetView() );
+
 	Mesh* cube = &ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" )->meshes[0];
 	cube->BindVAO();
 	for ( int i = 0; i < lights.size(); i++ ) {
@@ -159,7 +161,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 			glm::mat4 model = pos * scale;
 			lightShader->SetMat4( "model", model );
 			lightShader->SetVec3( "color", lights[i].color );
-			glDrawElements( GL_TRIANGLES, cube->numIndices, GL_UNSIGNED_SHORT, (void*) ( 0 ) );
+			glDrawElements( GL_TRIANGLES, cube->numIndices, GL_UNSIGNED_SHORT, ( void* ) ( 0 ) );
 		}
 	}
 	shader->Use();
@@ -167,25 +169,25 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 }
 
 #include "Input.h"
-void Renderer::DrawModelR(Model* model, Node* node , glm::mat4 parent ) {
+void Renderer::DrawModelR( Model* model, Node* node, glm::mat4 parent ) {
 
 
 	// Convert to model space
-	glm::mat4 modelSpace = parent * node->computedOffset ;
-	 
+	glm::mat4 modelSpace = parent * node->computedOffset;
+
 	glm::mat4 jointSpace = modelSpace * node->inverseBind;
 
 
 	if ( node->isJoint ) {
-		shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]" , jointSpace );
+		shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]", jointSpace );
 	}
 
 	//TODO ADD THE ENTITY TRANSLATION TOO! (probably just make it parent's TRS)
 	for ( int i = 0; i < node->meshIndices.size(); i++ ) {
 		Mesh* mesh = &model->meshes[node->meshIndices[i]];//node->meshes[i];
 		mesh->BindVAO();
-		
-		shader->SetMat4( "model", glm::mat4(1.0));
+
+		shader->SetMat4( "model", glm::mat4( 1.0 ) );
 
 		if ( mesh->diffuseTexture != nullptr ) {
 			glActiveTexture( GL_TEXTURE0 );
@@ -214,23 +216,23 @@ void Renderer::DrawModelR(Model* model, Node* node , glm::mat4 parent ) {
 
 	}
 
-		// =========== Draw Lights ============= //
-		lightShader->Use();
-		lightShader->SetMat4( "projection", projection );
-		lightShader->SetMat4( "view", camera->GetView() );
+	// =========== Draw Lights ============= //
+	lightShader->Use();
+	lightShader->SetMat4( "projection", projection );
+	lightShader->SetMat4( "view", camera->GetView() );
 
-		Mesh* cube = &ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" )->meshes[0];
-		cube->BindVAO();
-		glm::mat4 _model = node->computedOffset;
-		_model *= glm::scale( glm::mat4( 1.0 ), glm::vec3( .1f ) );
-		lightShader->SetMat4( "model", _model );
-		lightShader->SetVec3( "color" , glm::vec3(1,0,0));
-		//glDrawElements( GL_TRIANGLES, cube->numIndices, GL_UNSIGNED_SHORT, ( void* ) ( 0 ) );
-	//}
+	Mesh* cube = &ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" )->meshes[0];
+	cube->BindVAO();
+	glm::mat4 _model = node->computedOffset;
+	_model *= glm::scale( glm::mat4( 1.0 ), glm::vec3( .1f ) );
+	lightShader->SetMat4( "model", _model );
+	lightShader->SetVec3( "color", glm::vec3( 1, 0, 0 ) );
+	//glDrawElements( GL_TRIANGLES, cube->numIndices, GL_UNSIGNED_SHORT, ( void* ) ( 0 ) );
+//}
 	shader->Use();
 
 	for ( int n = 0; n < node->children.size(); n++ ) {
-		DrawModelR( model, node->children[n], modelSpace);
+		DrawModelR( model, node->children[n], modelSpace );
 	}
 
 	//exit(0);

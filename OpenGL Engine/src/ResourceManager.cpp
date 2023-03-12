@@ -16,6 +16,10 @@ Model* ResourceManager::GetModel( const char* path ) {
 	}
 }
 
+Animation* GetAnimation( std::string path ) {
+
+}
+
 Texture* ResourceManager::GetTexture( std::string path) {
 	if ( textureMap.find( path ) != textureMap.end() )
 		return &textureMap[path];
