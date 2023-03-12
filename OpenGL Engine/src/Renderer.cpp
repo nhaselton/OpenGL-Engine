@@ -33,6 +33,9 @@ void ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 p
 				t.SetPosition( anim->translations[index].translation );
 				t.SetScale( anim->scales[index].scale );
 				node->computedOffset = t.Matrix();
+				
+				if ( node->name == "origin" )
+					node->computedOffset = node->t.Matrix();
 			}
 		}
 	}
