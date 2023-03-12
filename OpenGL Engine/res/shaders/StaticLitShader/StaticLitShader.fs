@@ -75,7 +75,6 @@ void main(){
 
 
 	result *= color;
-	result = color;
 	FragColor = vec4(result,1.0);
 }
 

@@ -42,15 +42,15 @@ void Common::Init() {
 	renderer = new Renderer;
 	renderer->Init( window , &camera);
 
-	//Entity e2;
-	//e2.model = ResourceManager::Get().GetModel( "res/models/gltf/SPONZA/SPONZA.gltf" );
+	Entity e2;
+	e2.model = ResourceManager::Get().GetModel( "res/models/gltf/SPONZA/SPONZA.gltf" );
 	////e2.model = ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" );
 	//e2.transform.SetPosition( glm::vec3( 0, 0, 0 ) );
-	//entites.push_back( e2 );
+	entites.push_back( e2 );
 
 
 	Entity e3;
-	e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin.gltf" );
+	e3.model = ResourceManager::Get().GetModel( "res/models/brain/brainstem.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/ron.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin_2.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/BrainStem.gltf" );

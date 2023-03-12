@@ -44,7 +44,9 @@ void ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 p
 void Renderer::Init( Window* window, Camera* camera ) {
 	this->window = window;
 
-	shader = new Shader( "res/shaders/skeletalShader" );
+	dynamicShader = new Shader( "res/shaders/skeletalShader" );
+	staticShader = new Shader( "res/shaders/StaticLitShader" );
+
 	//shader = new Shader( "res/shaders/staticLitShader" );
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
@@ -90,9 +92,9 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // also clear the depth buffer now!
 
-	shader->Use();
-	shader->SetBool( "showNormalMap", showNormalMap );
-	shader->SetBool( "showSpecularMap", showSpecularMap );
+	staticShader->Use();
+	staticShader->SetBool( "showNormalMap", showNormalMap );
+	staticShader->SetBool( "showSpecularMap", showSpecularMap );
 
 	//TODO UNIFORM BUFFERS
 	//Send light to shader
@@ -103,48 +105,61 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	for ( int i = 0; i < lights.size(); i++ ) {
 		//Only 1 possible directional light
 		if ( lights[i].lType == LIGHT_DIRECTIONAL ) {
-			shader->SetVec3( "directionalLight.color", lights[i].color );
-			shader->SetVec3( "directionalLight.direction", lights[i].direction );
+			staticShader->SetVec3( "directionalLight.color", lights[i].color );
+			staticShader->SetVec3( "directionalLight.direction", lights[i].direction );
 		}
 
 		else if ( lights[i].lType == LIGHT_POINT ) {
 			std::string prefix = "pointLights[" + std::to_string( numPointLights++ ) + "].";
-			shader->SetVec3( prefix + "color", lights[i].color );
-			shader->SetVec3( prefix + "direction", lights[i].direction );
-			shader->SetVec3( prefix + "pos", lights[i].pos );
-			shader->SetFloat( prefix + "linear", lights[i].linear );
-			shader->SetFloat( prefix + "quadratic", lights[i].quadratic );
-			shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
-			shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
+			staticShader->SetVec3( prefix + "color", lights[i].color );
+			staticShader->SetVec3( prefix + "direction", lights[i].direction );
+			staticShader->SetVec3( prefix + "pos", lights[i].pos );
+			staticShader->SetFloat( prefix + "linear", lights[i].linear );
+			staticShader->SetFloat( prefix + "quadratic", lights[i].quadratic );
+			staticShader->SetFloat( prefix + "cutoff", lights[i].cutoff );
+			staticShader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
 		}
 
 		else if ( lights[i].lType == LIGHT_SPOT ) {
 			std::string prefix = "spotLights[" + std::to_string( numSpotLights++ ) + "].";
-			shader->SetVec3( prefix + "color", lights[i].color );
-			shader->SetVec3( prefix + "direction", lights[i].direction );
-			shader->SetVec3( prefix + "pos", lights[i].pos );
-			shader->SetFloat( prefix + "linear", lights[i].linear );
-			shader->SetFloat( prefix + "quadratic", lights[i].quadratic );
-			shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
-			shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
+			staticShader->SetVec3( prefix + "color", lights[i].color );
+			staticShader->SetVec3( prefix + "direction", lights[i].direction );
+			staticShader->SetVec3( prefix + "pos", lights[i].pos );
+			staticShader->SetFloat( prefix + "linear", lights[i].linear );
+			staticShader->SetFloat( prefix + "quadratic", lights[i].quadratic );
+			staticShader->SetFloat( prefix + "cutoff", lights[i].cutoff );
+			staticShader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
 		}
 
 	}
 
-	shader->SetInt( "numPointLights", numPointLights );
-	shader->SetInt( "numSpotLights", numSpotLights );
+	staticShader->SetInt( "numPointLights", numPointLights );
+	staticShader->SetInt( "numSpotLights", numSpotLights );
 
-	shader->SetMat4( "view", camera->GetView() );//camera->GetView() );
-	shader->SetMat4( "projection", projection );
-	shader->SetVec3( "viewPos", camera->transform.Position() );
+	staticShader->SetMat4( "view", camera->GetView() );//camera->GetView() );
+	staticShader->SetMat4( "projection", projection );
+	staticShader->SetVec3( "viewPos", camera->transform.Position() );
+
+
+	dynamicShader->Use();
+	dynamicShader->SetMat4( "view", camera->GetView() );//camera->GetView() );
+	dynamicShader->SetMat4( "projection", projection );
+	dynamicShader->SetVec3( "viewPos", camera->transform.Position() );
+
 
 	for ( int m = 0; m < entities.size(); m++ ) {
 		if ( entities[m].model == nullptr )
 			continue;
-
-
-		ComputeHierarchy( nullptr, 0, &entities[m].model->nodes[entities[m].model->rootNode] );
-		DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
+		if ( entities[m].model->isStatic ) {
+			ComputeHierarchy( nullptr, 0, &entities[m].model->nodes[entities[m].model->rootNode] );
+			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
+		}
+		else {
+			//Animation* a;
+			//a = ResourceManager::Get().GetAnimation( "Anim_0" );
+			ComputeHierarchy( nullptr, 0, &entities[m].model->nodes[entities[m].model->rootNode]);
+			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
+		}
 	}
 
 	// =========== Draw Lights ============= //
@@ -164,14 +179,13 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 			glDrawElements( GL_TRIANGLES, cube->numIndices, GL_UNSIGNED_SHORT, ( void* ) ( 0 ) );
 		}
 	}
-	shader->Use();
-
 }
 
 #include "Input.h"
 void Renderer::DrawModelR( Model* model, Node* node, glm::mat4 parent ) {
-
-
+	Shader* shader = ( model->isStatic ) ? staticShader : dynamicShader;
+	shader->Use();
+	
 	// Convert to model space
 	glm::mat4 modelSpace = parent * node->computedOffset;
 
@@ -187,7 +201,7 @@ void Renderer::DrawModelR( Model* model, Node* node, glm::mat4 parent ) {
 		Mesh* mesh = &model->meshes[node->meshIndices[i]];//node->meshes[i];
 		mesh->BindVAO();
 
-		shader->SetMat4( "model", glm::mat4( 1.0 ) );
+		shader->SetMat4( "model", node->t.Matrix() );
 
 		if ( mesh->diffuseTexture != nullptr ) {
 			glActiveTexture( GL_TEXTURE0 );
@@ -243,45 +257,3 @@ void Renderer::EndFrame() {
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 	glfwSwapBuffers( window->GetHandle() );
 }
-
-
-/*
-/*
-		for ( int i = 0; i < entities[m].model->meshes.size(); i++ ) {
-			Mesh* mesh = &entities[m].model->meshes[i];
-
-			mesh->BindVAO();
-
-			glm::mat4 model( 1.0 );
-			model = glm::scale( model, entities[m].transform.Scale() * mesh->node->t.Scale() );
-			model *= glm::mat4( glm::quat( entities[m].transform.Rotation() ) );
-			model *= glm::mat4( glm::quat(mesh->node->t.Rotation()));
-			model = glm::translate( model, entities[m].transform.Position() * mesh->node->t.Position() );
-			shader->SetMat4( "model", model );
-
-			if ( mesh->diffuseTexture != nullptr ) {
-				glActiveTexture( GL_TEXTURE0 );
-				glBindTexture( GL_TEXTURE_2D, mesh->diffuseTexture->textureID );
-				shader->SetInt( "albedo", 0 );
-			}
-
-			if ( mesh->normalTexture != nullptr ) {
-				glActiveTexture( GL_TEXTURE1 );
-				glBindTexture( GL_TEXTURE_2D, mesh->normalTexture->textureID );
-				shader->SetInt( "normalMap", 1 );
-			}
-
-			if ( mesh->specularTexture != nullptr ) {
-				glActiveTexture( GL_TEXTURE2 );
-				glBindTexture( GL_TEXTURE_2D, mesh->specularTexture->textureID );
-				shader->SetInt( "specularMap", 2 );
-			}
-
-			if ( mesh->numIndices != 0 ) {
-				glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
-			}
-			else {
-				glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );
-			}
-		}
-		*/

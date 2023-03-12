@@ -76,9 +76,16 @@ Model LoadStaticModelGLTF( const char* _path ) {
 	for ( int i = 0; i < json["materials"].size(); i++ ) {
 		JSON matJson = json["materials"][i];
 		Material mat{ -1 };
+		mat.baseColorTexture = -1;
+		mat.metallicRoughnessTexture = -1;
+		mat.normalTexture = -1;
+
+		if ( matJson["pbrMetallicRoughness"].find( "baseColorTexture" ) != matJson["pbrMetallicRoughness"].end() ) {
+			mat.baseColorTexture = matJson["pbrMetallicRoughness"]["baseColorTexture"]["index"];
+		}
+
 
 		if ( matJson["pbrMetallicRoughness"].find( "metallicRoughnessTexture" ) != matJson["pbrMetallicRoughness"].end() ) {
-		mat.baseColorTexture = matJson["pbrMetallicRoughness"]["baseColorTexture"]["index"];
 			mat.metallicRoughnessTexture = matJson["pbrMetallicRoughness"]["metallicRoughnessTexture"]["index"];
 		}
 
@@ -147,6 +154,7 @@ Model LoadStaticModelGLTF( const char* _path ) {
 	// GET SKIN		//
 	//==============//
 	if ( json.contains( "skins" ) ) {
+		model.isStatic = false;
 		if ( json["skins"].size() > 1 )
 			std::cout << "MORE THAN 1 SKIN! WILL ONLY USE FIRST ONE " << std::endl;
 
@@ -419,10 +427,9 @@ void LoadAnimations( const char* _path ) {
 			if ( ResourceManager::Get().ContainsAnimation( name ) )
 				continue;
 
-			else
-				ResourceManager::Get().CreateAnimation( _path );
-			Animation& animation = *ResourceManager::Get().GetAnimation( _path );
-
+			ResourceManager::Get().CreateAnimation( name );
+			Animation& animation = *ResourceManager::Get().GetAnimation( name );
+			animation.name = name;
 
 			for ( int n = 0; n < json["animations"][i]["channels"].size(); n++ ) {
 				JSON channelJson = json["animations"][i]["channels"][n];

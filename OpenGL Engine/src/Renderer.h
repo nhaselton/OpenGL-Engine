@@ -23,11 +23,9 @@ public:
 	void			EndFrame();
 
 private:
-	class Shader*	shader;
+	class Shader*	staticShader;
+	class Shader*	dynamicShader;
 	class Shader*	lightShader;
-
-	class Shader*	geoPassShader;
-	class Shader*	screenShader;
 
 	class Window*	window;
 	Camera*			camera;
