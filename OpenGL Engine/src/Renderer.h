@@ -39,6 +39,6 @@ private:
 	bool			showSpecularMap;
 
 private:
-	void DrawModelR(Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
-
+	void			DrawModelR(Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
+	void			InitLights( std::vector<Light> lights );
 };

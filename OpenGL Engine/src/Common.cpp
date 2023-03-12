@@ -33,7 +33,7 @@ void Common::Init() {
 	camera.model = nullptr;
 	//camera.transform.SetPosition( glm::vec3( -1.6, 2.2, -0.1 ) );
 	//camera.transform.SetRotation( glm::vec3( 0.0, 3.1, 0.0) );
-	camera.transform.SetPosition( glm::vec3( 0, 1, -4.5 ) );
+	camera.transform.SetPosition( glm::vec3( .2, 1, -2.0 ) );
 	camera.transform.SetRotation( glm::vec3( 0, 1.5, 0 ) );
 
 	window = new Window;
@@ -50,8 +50,9 @@ void Common::Init() {
 
 
 	Entity e3;
-	e3.model = ResourceManager::Get().GetModel( "res/models/brain/brainstem.gltf" );
-	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/ron.gltf" );
+	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/brainstem.gltf" );
+	e3.model = ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" );
+	e3.transform.SetScale( glm::vec3(.1f) );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin_2.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/BrainStem.gltf" );
 	

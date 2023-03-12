@@ -92,49 +92,18 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // also clear the depth buffer now!
 
+	InitLights(lights);
+
+	dynamicShader->Use();
+	dynamicShader->SetBool( "showNormalMap", showNormalMap );
+	dynamicShader->SetBool( "showSpecularMap", showSpecularMap );
+
 	staticShader->Use();
 	staticShader->SetBool( "showNormalMap", showNormalMap );
 	staticShader->SetBool( "showSpecularMap", showSpecularMap );
 
 	//TODO UNIFORM BUFFERS
 	//Send light to shader
-
-	int numPointLights = 0;
-	int numSpotLights = 0;
-
-	for ( int i = 0; i < lights.size(); i++ ) {
-		//Only 1 possible directional light
-		if ( lights[i].lType == LIGHT_DIRECTIONAL ) {
-			staticShader->SetVec3( "directionalLight.color", lights[i].color );
-			staticShader->SetVec3( "directionalLight.direction", lights[i].direction );
-		}
-
-		else if ( lights[i].lType == LIGHT_POINT ) {
-			std::string prefix = "pointLights[" + std::to_string( numPointLights++ ) + "].";
-			staticShader->SetVec3( prefix + "color", lights[i].color );
-			staticShader->SetVec3( prefix + "direction", lights[i].direction );
-			staticShader->SetVec3( prefix + "pos", lights[i].pos );
-			staticShader->SetFloat( prefix + "linear", lights[i].linear );
-			staticShader->SetFloat( prefix + "quadratic", lights[i].quadratic );
-			staticShader->SetFloat( prefix + "cutoff", lights[i].cutoff );
-			staticShader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
-		}
-
-		else if ( lights[i].lType == LIGHT_SPOT ) {
-			std::string prefix = "spotLights[" + std::to_string( numSpotLights++ ) + "].";
-			staticShader->SetVec3( prefix + "color", lights[i].color );
-			staticShader->SetVec3( prefix + "direction", lights[i].direction );
-			staticShader->SetVec3( prefix + "pos", lights[i].pos );
-			staticShader->SetFloat( prefix + "linear", lights[i].linear );
-			staticShader->SetFloat( prefix + "quadratic", lights[i].quadratic );
-			staticShader->SetFloat( prefix + "cutoff", lights[i].cutoff );
-			staticShader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
-		}
-
-	}
-
-	staticShader->SetInt( "numPointLights", numPointLights );
-	staticShader->SetInt( "numSpotLights", numSpotLights );
 
 	staticShader->SetMat4( "view", camera->GetView() );//camera->GetView() );
 	staticShader->SetMat4( "projection", projection );
@@ -155,9 +124,10 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
 		}
 		else {
-			//Animation* a;
-			//a = ResourceManager::Get().GetAnimation( "Anim_0" );
-			ComputeHierarchy( nullptr, 0, &entities[m].model->nodes[entities[m].model->rootNode]);
+			Animation* a;
+			//a = ResourceManager::Get().GetAnimation( "wiggle" );
+			a = nullptr;
+			ComputeHierarchy( a, 0, &entities[m].model->nodes[entities[m].model->rootNode] );
 			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
 		}
 	}
@@ -185,11 +155,11 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 void Renderer::DrawModelR( Model* model, Node* node, glm::mat4 parent ) {
 	Shader* shader = ( model->isStatic ) ? staticShader : dynamicShader;
 	shader->Use();
-	
+
 	// Convert to model space
 	glm::mat4 modelSpace = parent * node->computedOffset;
 
-	glm::mat4 jointSpace = modelSpace * node->inverseBind;
+	glm::mat4 jointSpace = modelSpace * node->inverseBind * glm::scale(glm::mat4(1.0),glm::vec3(.01f));
 
 
 	if ( node->isJoint ) {
@@ -256,4 +226,54 @@ void Renderer::EndFrame() {
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 	glfwSwapBuffers( window->GetHandle() );
+}
+
+
+void Renderer::InitLights( std::vector<Light> lights ) {
+	Shader* shaders[] = {
+		staticShader,
+		dynamicShader
+	};
+	int numShaders = 2;
+
+	for ( int s = 0; s < numShaders; s++ ) {
+		Shader* shader = shaders[s];
+		shader->Use();
+		int numPointLights = 0;
+		int numSpotLights = 0;
+
+		for ( int i = 0; i < lights.size(); i++ ) {
+			//Only 1 possible directional light
+			if ( lights[i].lType == LIGHT_DIRECTIONAL ) {
+				shader->SetVec3( "directionalLight.color", lights[i].color );
+				shader->SetVec3( "directionalLight.direction", lights[i].direction );
+			}
+
+			else if ( lights[i].lType == LIGHT_POINT ) {
+				std::string prefix = "pointLights[" + std::to_string( numPointLights++ ) + "].";
+				shader->SetVec3( prefix + "color", lights[i].color );
+				shader->SetVec3( prefix + "direction", lights[i].direction );
+				shader->SetVec3( prefix + "pos", lights[i].pos );
+				shader->SetFloat( prefix + "linear", lights[i].linear );
+				shader->SetFloat( prefix + "quadratic", lights[i].quadratic );
+				shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
+				shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
+			}
+
+			else if ( lights[i].lType == LIGHT_SPOT ) {
+				std::string prefix = "spotLights[" + std::to_string( numSpotLights++ ) + "].";
+				shader->SetVec3( prefix + "color", lights[i].color );
+				shader->SetVec3( prefix + "direction", lights[i].direction );
+				shader->SetVec3( prefix + "pos", lights[i].pos );
+				shader->SetFloat( prefix + "linear", lights[i].linear );
+				shader->SetFloat( prefix + "quadratic", lights[i].quadratic );
+				shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
+				shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
+			}
+
+		}
+
+		shader->SetInt( "numPointLights", numPointLights );
+		shader->SetInt( "numSpotLights", numSpotLights );
+	}
 }

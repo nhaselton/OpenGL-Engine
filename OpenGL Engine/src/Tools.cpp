@@ -103,7 +103,12 @@ Model LoadStaticModelGLTF( const char* _path ) {
 	//TODO create node hierechy from this
 	model.rootNode = json["scenes"][0]["nodes"][0];
 
-	model.nodes.resize( json["nodes"].size() );// resize here so
+	//model.nodes.resize( json["nodes"].size() );// resize here so
+	Node n;
+
+	for ( int i = 0; i < json["nodes"].size(); i++ ) {
+		model.nodes.push_back( n );
+	}
 
 	for ( int i = 0; i < json["nodes"].size(); i++ ) {
 		JSON nodeJson = json["nodes"][i];
@@ -142,10 +147,11 @@ Model LoadStaticModelGLTF( const char* _path ) {
 			glm::vec3 euler = glm::eulerAngles( rot );
 			n.t.SetRotation( euler );
 		}
-
+		
 		if ( nodeJson.find( "children" ) != nodeJson.end() ) {
+			n.children.resize( nodeJson["children"].size() );
 			for ( int j = 0; j < nodeJson["children"].size(); j++ )
-				n.children.push_back( &model.nodes[nodeJson["children"][j]] );
+				n.children[j] = &model.nodes[nodeJson["children"][j]];
 		}
 		model.nodes[i] = n;
 	}
@@ -265,7 +271,7 @@ Model LoadStaticModelGLTF( const char* _path ) {
 					texPath += json["images"][texID]["uri"];
 					mesh.normalTexture = ResourceManager::Get().GetTexture( texPath.c_str() );
 				}
-				if ( m.normalTexture != -1 ) {
+				if ( m.metallicRoughnessTexture != -1 ) {
 					std::string texPath = directory;
 					int texID = json["textures"][m.metallicRoughnessTexture]["source"];
 					texPath += json["images"][texID]["uri"];

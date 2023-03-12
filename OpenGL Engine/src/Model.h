@@ -37,6 +37,7 @@ struct Animation {
 
 
 struct Node {
+	Node(){}
 	std::string			name;
 	int					index;
 	Transform			t;
