@@ -125,10 +125,11 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 		}
 		else {
 			Animation* a;
-			//a = ResourceManager::Get().GetAnimation( "wiggle" );
-			a = nullptr;
+			a = ResourceManager::Get().GetAnimation( "idle" );
+			a = ResourceManager::Get().GetAnimation( "run_forward.003" );
+//			a = nullptr;
 			ComputeHierarchy( a, 0, &entities[m].model->nodes[entities[m].model->rootNode] );
-			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
+			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode], glm::scale(glm::mat4(1.0),glm::vec3(.5f)) );
 		}
 	}
 
@@ -159,7 +160,7 @@ void Renderer::DrawModelR( Model* model, Node* node, glm::mat4 parent ) {
 	// Convert to model space
 	glm::mat4 modelSpace = parent * node->computedOffset;
 
-	glm::mat4 jointSpace = modelSpace * node->inverseBind * glm::scale(glm::mat4(1.0),glm::vec3(.01f));
+	glm::mat4 jointSpace = modelSpace * node->inverseBind;
 
 
 	if ( node->isJoint ) {

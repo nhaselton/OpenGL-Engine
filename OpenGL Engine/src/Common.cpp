@@ -52,6 +52,8 @@ void Common::Init() {
 	Entity e3;
 	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/brainstem.gltf" );
 	e3.model = ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" );
+	
+	LoadAnimations("res/models/gltf/imp/anim/imp_run_forward.gltf");
 	e3.transform.SetScale( glm::vec3(.1f) );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin_2.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/BrainStem.gltf" );
