@@ -31,10 +31,7 @@ void Common::Init() {
 	};
 
 	camera.model = nullptr;
-	//camera.transform.SetPosition( glm::vec3( -1.6, 2.2, -0.1 ) );
-	//camera.transform.SetRotation( glm::vec3( 0.0, 3.1, 0.0) );
-	camera.transform.SetPosition( glm::vec3( .2, 1, -2.0 ) );
-	camera.transform.SetRotation( glm::vec3( 0, 1.5, 0 ) );
+
 
 	window = new Window;
 	window->Init();
@@ -43,22 +40,22 @@ void Common::Init() {
 	renderer->Init( window , &camera);
 
 	Entity e2;
-	e2.model = ResourceManager::Get().GetModel( "res/models/gltf/SPONZA/SPONZA.gltf" );
-	////e2.model = ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" );
+	e2.model = ResourceManager::Get().GetModel( "res/models/gltf/sponza/sponza.gltf" );
+	//e2.model = ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" );
 	//e2.transform.SetPosition( glm::vec3( 0, 0, 0 ) );
 	entites.push_back( e2 );
 
 
-	Entity e3;
-	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/brainstem.gltf" );
-	e3.model = ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" );
-	
-	LoadAnimations("res/models/gltf/imp/anim/imp_run_forward.gltf");
-	e3.transform.SetScale( glm::vec3(.1f) );
+	//Entity e3;
+	////e3.model = ResourceManager::Get().GetModel( "res/models/brain/brainstem.gltf" );
+	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" );
+	//
+	//LoadAnimations("res/models/gltf/imp/anim/imp_run_forward.gltf");
+	//e3.transform.SetScale( glm::vec3(.1f) );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin_2.gltf" );
 	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/BrainStem.gltf" );
 	
-	entites.push_back( e3 );
+	//entites.push_back( e3 );
 
 	Light pointLight = {};
 	pointLight.lType = LIGHT_POINT;
@@ -67,15 +64,19 @@ void Common::Init() {
 	pointLight.direction = camera.GetForward();
 	pointLight.linear = 0.022;
 	pointLight.outerCutoff = glm::cos( glm::radians( 17.5f ) );
-	pointLight.pos = glm::vec3( -4.9, 1.2f, 0.0f );
+	pointLight.pos = glm::vec3( -2.0f, 4.0f, -1.0f );
 	pointLight.quadratic = 0.019;
-	lights.push_back( pointLight );
+	//lights.push_back( pointLight );
 
-	Light directional;
+	Light directional {};
 	directional.lType = LIGHT_DIRECTIONAL;
 	directional.color = glm::vec3( 1 );
-	directional.direction = glm::vec3(.25f,.35f,0.0f);
+	directional.pos = glm::vec3( -.7, 12, -.4 );
+	directional.direction = glm::vec3( -1, .1, 0);
 	lights.push_back( directional );
+
+	camera.transform.SetPosition( directional.pos );
+	//camera.transform.SetRotation( directional.direction );
 
 	Light spot;
 	spot.lType = LIGHT_SPOT;
@@ -85,8 +86,8 @@ void Common::Init() {
 	spot.linear = 0.022;
 	spot.outerCutoff = glm::cos( glm::radians( 17.5f ) );
 	spot.pos = glm::vec3( -.5, 1.5, 3.7);
-	spot.quadratic = 0.019;
-	lights.push_back( spot );
+	spot.quadratic = 0.019;	
+	//lights.push_back( spot );
 
 }
 

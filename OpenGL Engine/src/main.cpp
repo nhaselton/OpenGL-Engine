@@ -11,7 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-/* TODO LIST BY 3/12 */
+/* TODO LIST BY 3/19 */
 /*
     1) Textures (Done)
     2) Lighting (Done)
@@ -24,12 +24,17 @@
         b) normalmap (Done)
     5) static GLTF Model import ( Done ) 
     6) static "Ubershader"  ( Done ) 
-    7) Skeletal Animation
-    8) Shadows
-        a) directional
+    7) Skeletal Animation ( Done ) 
+    8) Shadow types Static
+        a) directional (Close)
         b) point
         c) spot
-   9) Animated shadow casted Imp inside of sponza
+    9) Multiple Shader casters, increase size of lightview matrix
+    10) Shadow Types Dynamic
+        a) 
+        b) 
+        c) 
+   11) Animated shadow casted Imp inside of sponza 
 */
 
 int main( void ) {

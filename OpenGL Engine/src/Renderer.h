@@ -6,12 +6,9 @@
 #include "Camera.h"
 #include "Light.h"
 
-struct DeferredPath {
-	unsigned int gFrameBuffer;
-	
-	unsigned int positionTexture;
-	unsigned int normalTexture;
-	unsigned int albedoTexture;
+struct BufferList{
+	unsigned int	shadowMapFBO;
+	unsigned int	depthMapImage;
 };
 
 class Renderer {
@@ -26,6 +23,9 @@ private:
 	class Shader*	staticShader;
 	class Shader*	dynamicShader;
 	class Shader*	lightShader;
+	class Shader* staticShadowShader;
+	class Shader*	debugDepthQuadShader;
+
 
 	class Window*	window;
 	Camera*			camera;
@@ -33,12 +33,16 @@ private:
 	glm::mat4		view;
 	glm::mat4		projection;
 
-	DeferredPath	deferredPath;
+	//BufferList		buffers;
+	unsigned int	shadowMapFBO;
+	unsigned int	depthMapImage;
 
 	bool			showNormalMap;
 	bool			showSpecularMap;
 
 private:
 	void			DrawModelR(Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
+	void			ShadowDrawModelR(Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
 	void			InitLights( std::vector<Light> lights );
+	void			BindTextures( Mesh* mesh );
 };

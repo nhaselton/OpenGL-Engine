@@ -30,6 +30,7 @@ void Window::Init() {
     glfwMakeContextCurrent( handle );
     gladLoadGL();
 
+    glfwSwapInterval( 0 );
 
     glfwSetKeyCallback( handle, Input::KeyCallback );
 }

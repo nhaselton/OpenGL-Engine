@@ -529,13 +529,14 @@ Texture LoadTexture( const char* path, TextureType type ) {
 		std::cout << "[ERROR] COULD NOT LOAD TEXTURE AT: " << path << std::endl;
 	}
 
+	
+	glGenTextures( 1, &texture.textureID );
+	glBindTexture( GL_TEXTURE_2D, texture.textureID );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
-	glGenTextures( 1, &texture.textureID );
-	glBindTexture( GL_TEXTURE_2D, texture.textureID );
 
 	//unsigned int imageType = ( channels == 3 ) ? GL_RGB : GL_RGBA;
 	switch ( channels ) {

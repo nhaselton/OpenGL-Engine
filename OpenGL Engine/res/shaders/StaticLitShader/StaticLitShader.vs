@@ -7,12 +7,13 @@ layout (location = 3) in vec3 aTangent;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+uniform mat4 lightSpaceMatrix;
 
 out vec2 vTexCoords;
 out vec3 vFragPos;
 out vec3 vNormal;
 out mat3 TBN;
-
+out vec4 directionalLightLightFragPos;
 
 void main() {
     vTexCoords = aTexCoords;
@@ -25,6 +26,8 @@ void main() {
     T = normalize(T - dot(T, N) * N);
     vec3 B = cross(N, T);
     TBN = mat3(T, B, N);
+
+    directionalLightLightFragPos = lightSpaceMatrix * vec4(vFragPos, 1.0);
 
     gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
 }

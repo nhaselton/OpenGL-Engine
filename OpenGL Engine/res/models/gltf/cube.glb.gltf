@@ -1,6 +1,6 @@
 {
     "asset" : {
-        "generator" : "Khronos glTF Blender I/O v1.3.48",
+        "generator" : "Khronos glTF Blender I/O v3.4.50",
         "version" : "2.0"
     },
     "scene" : 0,
@@ -15,23 +15,23 @@
     "nodes" : [
         {
             "mesh" : 0,
-            "name" : "Cube",
+            "name" : "Suzanne",
             "scale" : [
-                -0.0030061283614486456,
-                -0.0030061283614486456,
-                -0.0030061283614486456
+                2.8519420623779297,
+                2.8519420623779297,
+                2.8519420623779297
             ]
         }
     ],
     "meshes" : [
         {
-            "name" : "Cube.001",
+            "name" : "Suzanne",
             "primitives" : [
                 {
                     "attributes" : {
                         "POSITION" : 0,
-                        "NORMAL" : 1,
-                        "TEXCOORD_0" : 2
+                        "TEXCOORD_0" : 1,
+                        "NORMAL" : 2
                     },
                     "indices" : 3
                 }
@@ -42,63 +42,67 @@
         {
             "bufferView" : 0,
             "componentType" : 5126,
-            "count" : 24,
+            "count" : 1966,
             "max" : [
-                1,
-                1,
-                1
+                1.3671875,
+                0.984375,
+                0.8515625
             ],
             "min" : [
-                -1,
-                -1,
-                -1
+                -1.3671875,
+                -0.984375,
+                -0.8515625
             ],
             "type" : "VEC3"
         },
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 24,
-            "type" : "VEC3"
+            "count" : 1966,
+            "type" : "VEC2"
         },
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 24,
-            "type" : "VEC2"
+            "count" : 1966,
+            "type" : "VEC3"
         },
         {
             "bufferView" : 3,
             "componentType" : 5123,
-            "count" : 36,
+            "count" : 2904,
             "type" : "SCALAR"
         }
     ],
     "bufferViews" : [
         {
             "buffer" : 0,
-            "byteLength" : 288,
-            "byteOffset" : 0
+            "byteLength" : 23592,
+            "byteOffset" : 0,
+            "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 288,
-            "byteOffset" : 288
+            "byteLength" : 15728,
+            "byteOffset" : 23592,
+            "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 192,
-            "byteOffset" : 576
+            "byteLength" : 23592,
+            "byteOffset" : 39320,
+            "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 72,
-            "byteOffset" : 768
+            "byteLength" : 5808,
+            "byteOffset" : 62912,
+            "target" : 34963
         }
     ],
     "buffers" : [
         {
-            "byteLength" : 840,
+            "byteLength" : 68720,
             "uri" : "cube.glb.bin"
         }
     ]
