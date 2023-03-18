@@ -126,17 +126,24 @@ void Renderer::BeginFrame() {
 	ImGui::End();
 }
 
+#include "Input.h"
 void renderQuad();
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
+	if ( Input::keys[GLFW_KEY_SPACE] == true ) 		{
+		lights[0].direction = camera->GetForward();
+		lights[0].pos = camera->transform.Position();
+	}
+	
 	InitLights( lights );
 
-	float near_plane = 0.10f, far_plane = 20.5f;
+
+	float near_plane = 1.0f, far_plane = 30.0f;
 	//glm::mat4 lightProjection = projection;
-	glm::mat4 lightProjection = glm::ortho( -15.0f, 15.0f, -12.0f, 12.0f, near_plane, far_plane );
+	glm::mat4 lightProjection = glm::ortho( -20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane );
 	//glm::mat4 lightView = glm::lookAt( lights[0].pos, glm::normalize(lights[0].pos + lights[0].direction), glm::vec3( 0.0, 1.0, 0.0 ) );;
 	//glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 	
-	glm::mat4 lightView = glm::lookAt( lights[0].pos, glm::normalize(lights[0].pos + lights[0].direction), glm::vec3(0,1,0) );
+	glm::mat4 lightView = glm::lookAt( lights[0].pos, lights[0].pos + lights[0].direction * 10.f, glm::vec3(0,1,0) );
 	glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
 	// Shadow Draw
@@ -183,7 +190,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	staticShader->SetMat4( "view", camera->GetView() );
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 	staticShader->SetMat4( "projection", projection );
-	staticShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
+	staticShader->SetMat4( "directionalLightSpaceMatrix", lightSpaceMatrix );
 	staticShader->SetBool( "showNormalMap", showNormalMap );
 	staticShader->SetBool( "showSpecularMap", showSpecularMap );
 	staticShader->SetInt( "shadowMap", 4 );
