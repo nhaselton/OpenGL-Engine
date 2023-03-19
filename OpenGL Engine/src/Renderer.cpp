@@ -18,7 +18,7 @@ float bias;
 
 
 Renderer::Renderer() {
-	index = 0; 
+	index = 0;
 	bias = 0;
 	showNormalMap = false;
 	showSpecularMap = true;
@@ -26,29 +26,8 @@ Renderer::Renderer() {
 
 }
 
-void ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) ) {
-	node->computedOffset = node->t.Matrix();//animation offset
-	if ( animation ) {
 
-		for ( int i = 0; i < animation->animChannels.size(); i++ ) {
-			AnimChannel* anim = &animation->animChannels[i];
-			if ( anim->nodeID == node->index && anim->rotations.size() > 0 ) {
-				Transform t;
-				t.SetRotation( glm::eulerAngles( glm::quat( anim->rotations[index].rotaiton ) ) );
-				t.SetPosition( anim->translations[index].translation );
-				t.SetScale( anim->scales[index].scale );
-				node->computedOffset = t.Matrix();
-
-				if ( node->name == "origin" )
-					node->computedOffset = node->t.Matrix();
-			}
-		}
-	}
-
-	for ( int i = 0; i < node->children.size(); i++ )
-		ComputeHierarchy( animation, index, node->children[i], node->computedOffset );
-}
-const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 void Renderer::Init( Window* window, Camera* camera ) {
 	this->window = window;
@@ -56,14 +35,18 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	dynamicShader = new Shader( "res/shaders/skeletalShader" );
 	staticShader = new Shader( "res/shaders/StaticLitShader" );
 	staticShadowShader = new Shader( "res/shaders/staticshadowshader" );
+	staticCubeMapShadowShader = new Shader( "res/shaders/staticCubeMapShadowShader" );
 	lightShader = new Shader( "res/shaders/lightShader" );
 	debugDepthQuadShader = new Shader( "res/shaders/depthShader" );
 
-//shader = new Shader( "res/shaders/staticLitShader" );
+	//shader = new Shader( "res/shaders/staticLitShader" );
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
 	glEnable( GL_DEPTH_TEST );
 
+
+	//CreateDepthMap();
+	CreateCubeMap();
 
 
 	IMGUI_CHECKVERSION();
@@ -73,6 +56,16 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	ImGui_ImplGlfw_InitForOpenGL( window->GetHandle(), true );
 	ImGui_ImplOpenGL3_Init( "#version 330" );
 
+	staticShader->Use();
+	staticShader->SetInt( "albedo", 0 );
+	staticShader->SetInt( "normalMap", 1 );
+	staticShader->SetInt( "specularMap", 2 );
+	staticShader->SetInt( "shadowMap", 4 );
+	staticShader->SetInt( "cubeMap", 5 );
+
+}
+
+void Renderer::CreateDepthMap() {
 	glGenFramebuffers( 1, &shadowMapFBO );
 	// create depth texture
 	glGenTextures( 1, &depthMapImage );
@@ -88,14 +81,12 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	glDrawBuffer( GL_NONE );
 	glReadBuffer( GL_NONE );
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+}
 
-
-	staticShader->Use();
-	staticShader->SetInt( "albedo", 0 );
-	staticShader->SetInt( "normalMap", 1 );
-	staticShader->SetInt( "specularMap", 2 );
+void Renderer::CreateCubeMap() {
 
 }
+
 
 void Renderer::BeginFrame() {
 	ImGui_ImplOpenGL3_NewFrame();
@@ -122,90 +113,13 @@ void Renderer::BeginFrame() {
 	ImGui::End();
 
 	ImGui::Begin( "Shadow Bias" );
-	ImGui::SliderFloat( "Shadow Bias", &bias, 0, .1f);
+	ImGui::SliderFloat( "Shadow Bias", &bias, 0, .1f );
 	ImGui::End();
 }
 
 #include "Input.h"
 void renderQuad();
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
-	if ( Input::keys[GLFW_KEY_SPACE] == true ) 		{
-		lights[0].direction = camera->GetForward();
-		lights[0].pos = camera->transform.Position();
-	}
-	
-	InitLights( lights );
-
-
-	float near_plane = 1.0f, far_plane = 30.0f;
-	//glm::mat4 lightProjection = projection;
-	glm::mat4 lightProjection = glm::ortho( -20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane );
-	//glm::mat4 lightView = glm::lookAt( lights[0].pos, glm::normalize(lights[0].pos + lights[0].direction), glm::vec3( 0.0, 1.0, 0.0 ) );;
-	//glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-	
-	glm::mat4 lightView = glm::lookAt( lights[0].pos, lights[0].pos + lights[0].direction * 10.f, glm::vec3(0,1,0) );
-	glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-	// Shadow Draw
-	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
-	glViewport( 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-	glClear( GL_DEPTH_BUFFER_BIT );
-	staticShadowShader->Use();
-	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
-
-	glEnable( GL_CULL_FACE);
-	glCullFace( GL_FRONT );
-
-	for ( int i = 0; i < entities[0].model->nodes.size(); i++ ) {
-		glm::mat4 matrix = entities[0].model->nodes[i].t.Matrix();
-
-		for ( int n = 0; n < entities[0].model->nodes[i].meshIndices.size(); n++ ) {
-			Mesh& mesh = entities[0].model->meshes[entities[0].model->nodes[i].meshIndices[n]];
-			staticShadowShader->SetMat4( "model", matrix );
-
-			mesh.BindVAO();
-			glDrawElements( GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_SHORT, ( void* ) 0 );
-		}
-	}
-	glDisable(GL_CULL_FACE);
-
-
-
-	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-	glViewport( 0, 0, 1280, 720 );
-	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
-	glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
-
-	glActiveTexture( GL_TEXTURE4 );
-	glBindTexture( GL_TEXTURE_2D, depthMapImage );
-
-		debugDepthQuadShader->Use();
-		debugDepthQuadShader->SetFloat( "near_plane", near_plane );
-		debugDepthQuadShader->SetFloat( "far_plane", far_plane );
-		debugDepthQuadShader->SetInt("depthMap", 4);
-	//	renderQuad();
-	//	return;
-	
-	staticShader->Use();
-	staticShader->SetMat4( "view", camera->GetView() );
-	staticShader->SetVec3( "viewPos", camera->transform.Position() );
-	staticShader->SetMat4( "projection", projection );
-	staticShader->SetMat4( "directionalLightSpaceMatrix", lightSpaceMatrix );
-	staticShader->SetBool( "showNormalMap", showNormalMap );
-	staticShader->SetBool( "showSpecularMap", showSpecularMap );
-	staticShader->SetInt( "shadowMap", 4 );
-	staticShader->SetFloat( "maxBias", bias );
-
-	for ( int i = 0; i < entities[0].model->nodes.size(); i++ ) {
-		glm::mat4 matrix = entities[0].model->nodes[i].t.Matrix();
-		for ( int n = 0; n < entities[0].model->nodes[i].meshIndices.size(); n++ ) {
-			Mesh& mesh = entities[0].model->meshes[entities[0].model->nodes[i].meshIndices[n]];
-			staticShader->SetMat4( "model", matrix );
-			BindTextures( &mesh );
-			mesh.BindVAO();
-			glDrawElements( GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_SHORT, ( void* ) 0 );
-		}
-	}
 
 }
 void Renderer::BindTextures( Mesh* mesh ) {
@@ -376,10 +290,8 @@ void Renderer::ShadowDrawModelR( Model* model, Node* node, glm::mat4 parent ) {
 
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
-void renderQuad()
-{
-	if ( quadVAO == 0 )
-	{
+void renderQuad() {
+	if ( quadVAO == 0 ) {
 		float quadVertices[] = {
 			// positions        // texture Coords
 			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
@@ -403,7 +315,28 @@ void renderQuad()
 	glBindVertexArray( 0 );
 }
 
+void ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) ) {
+	node->computedOffset = node->t.Matrix();//animation offset
+	if ( animation ) {
 
+		for ( int i = 0; i < animation->animChannels.size(); i++ ) {
+			AnimChannel* anim = &animation->animChannels[i];
+			if ( anim->nodeID == node->index && anim->rotations.size() > 0 ) {
+				Transform t;
+				t.SetRotation( glm::eulerAngles( glm::quat( anim->rotations[index].rotaiton ) ) );
+				t.SetPosition( anim->translations[index].translation );
+				t.SetScale( anim->scales[index].scale );
+				node->computedOffset = t.Matrix();
+
+				if ( node->name == "origin" )
+					node->computedOffset = node->t.Matrix();
+			}
+		}
+	}
+
+	for ( int i = 0; i < node->children.size(); i++ )
+		ComputeHierarchy( animation, index, node->children[i], node->computedOffset );
+}
 /*
 
 

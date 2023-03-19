@@ -32,7 +32,5 @@ void main() {
     vec3 B = cross(N, T);
     TBN = mat3(T, B, N);
 
-    //directionalLightLightFragPos = directionalLightSpaceMatrix * vec4(vFragPos, 1.0);
-
     gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
 }

@@ -60,20 +60,18 @@ void Common::Init() {
 	Light pointLight = {};
 	pointLight.lType = LIGHT_POINT;
 	pointLight.color = glm::vec3( 1, 1, 1 );
-	pointLight.cutoff = glm::cos( glm::radians( 12.0f ) );
 	pointLight.direction = camera.GetForward();
 	pointLight.linear = 0.022;
-	pointLight.outerCutoff = glm::cos( glm::radians( 17.5f ) );
-	pointLight.pos = glm::vec3( -2.0f, 4.0f, -1.0f );
+	pointLight.pos = glm::vec3( -.3, 1.7, -.3f );
 	pointLight.quadratic = 0.019;
-	//lights.push_back( pointLight );
+	lights.push_back( pointLight );
 
 	Light directional {};
 	directional.lType = LIGHT_DIRECTIONAL;
 	directional.color = glm::vec3( 1 );
 	directional.pos = glm::vec3( -6.4,10.9,-0.6);
 	directional.direction = glm::vec3( -0.9,-0.5,0.0);
-	lights.push_back( directional );
+	//lights.push_back( directional );
 
 	//camera.transform.SetPosition( directional.pos );
 	//camera.transform.SetRotation( directional.direction );
@@ -82,10 +80,10 @@ void Common::Init() {
 	spot.lType = LIGHT_SPOT;
 	spot.color = glm::vec3( 1, 1, 1 );
 	spot.cutoff = glm::cos( glm::radians( 12.0f ) );
-	spot.direction = glm::vec3(0,-.1,-1);
 	spot.linear = 0.022;
 	spot.outerCutoff = glm::cos( glm::radians( 17.5f ) );
-	spot.pos = glm::vec3( -.5, 1.5, 3.7);
+	spot.pos = glm::vec3( -1.4, 1, 0.0);
+	spot.direction = glm::vec3(11,0.1,-0.8);
 	spot.quadratic = 0.019;	
 	//lights.push_back( spot );
 

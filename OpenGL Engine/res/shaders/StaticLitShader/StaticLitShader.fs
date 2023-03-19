@@ -9,12 +9,14 @@ struct Light {
 	float quadratic;
 	float cutoff;
 	float outerCutoff;
+	int	  ID;
 };
 
 uniform sampler2D albedo;
 uniform sampler2D specularMap;
 uniform sampler2D normalMap;
 uniform sampler2D shadowMap;
+uniform samplerCube cubeMap;
 
 uniform Light pointLights[32];
 uniform Light spotLights[32];
@@ -39,6 +41,7 @@ uniform mat4[32] spotLightSpaceMatrices;
 in vec2 vTexCoords;
 in vec3 vNormal;
 in vec3 vFragPos;
+in vec3 vWorldSpace;
 in mat3 TBN;
 //in vec4 vFragLightSpace;
 
@@ -47,9 +50,11 @@ uniform bool showSpecularMap;
 
 vec3 CalcDirectional(vec3 normal, float specular);
 vec3 CalcPointLights(Light light, vec3 normal ,float specular);
-vec3 CalcSpotLights(Light light, vec3 normal ,float specular);
+vec3 CalcSpotLights(Light light, vec3 normal ,float specular,int lightID);
 float CalcShadow(vec4 fragLightSpace, vec3 normal, vec3 lightDir);
 vec3 ShadowOffsetLookUp(sampler2D map, vec4 loc, vec2 offset);
+float CalcCubeMapShadow(vec3 lightPos);
+
 
 void main(){
 	vec3 normal;
@@ -78,19 +83,32 @@ void main(){
 	//	3. spotLights
 
 	//Directional Light
-	result += CalcDirectional( normal,specular );
+	//result += CalcDirectional( normal,specular );
 
 	//Point Lights
-	//for ( int i =0 ; i < numPointLights; i++ )
-	//	result += CalcPointLights(pointLights[i], normal, specular );
+	for ( int i =0 ; i < numPointLights; i++ )
+		result += CalcPointLights(pointLights[i], normal, specular );
 
 	//Spot Lights
 	//for ( int i =0; i < numSpotLights; i++ )
-	//	result += CalcSpotLights(spotLights[i], normal, specular );
+	//	result += CalcSpotLights(spotLights[i], normal, specular, i );
 
-	//result *= color;
+	result *= color;
 	FragColor = vec4(result,1.0);
 }
+
+float CalcCubeMapShadow( vec3 lightPos ){
+	float dist =  length( vFragPos - lightPos );
+	lightPos.y =  -lightPos.y;//invert Y becuse cubemaps change coord spaces 
+	float cubeDist = texture(cubeMap, lightPos).r;
+
+	if (cubeDist < dist)
+		return 0;
+	else
+		return 1;
+}
+
+
 
 float CalcShadow(vec4 fragLightSpace, vec3 normal, vec3 lightDir){
 	vec3 projCoords = fragLightSpace.xyz / fragLightSpace.w;
@@ -144,8 +162,8 @@ vec3 CalcDirectional(vec3 normal ,float specular){
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32) * specular;
 
 	vec4 directionalLightLightFragPos = directionalLightSpaceMatrix * vec4(vFragPos, 1.0);
-
 	float shadow = CalcShadow(directionalLightLightFragPos, normal, lightDir);
+
 	result = (1.0 - shadow) * diffuse *   directionalLight.color;
 	return result;
 }
@@ -162,11 +180,19 @@ vec3 CalcPointLights(Light light ,vec3 normal ,float specular){
 
     float attenuation = 1.0 / ( 1.0 + light.linear * fragDist + light.quadratic * ( fragDist * fragDist ) );
     
-    vec3 result = vec3(diffuse + spec ) * light.color;
+	diffuse *= attenuation;
+	specular *= attenuation;
+
+
+	//Shadows
+	float shadow = CalcCubeMapShadow(light.pos);
+
+
+    vec3 result = (1.0 -shadow) * vec3(diffuse + spec ) * light.color;
 	return result;
 }
 
-vec3 CalcSpotLights(Light light, vec3 normal ,float specular) {
+vec3 CalcSpotLights(Light light, vec3 normal ,float specular, int lightID) {
 
     vec3 lightDir = normalize( light.pos - vFragPos );
     // == DIFFUSE == // 
@@ -183,11 +209,20 @@ vec3 CalcSpotLights(Light light, vec3 normal ,float specular) {
    
     float fragDist = length(light.pos - vFragPos );
     float attenuation = 1.0 / ( 1.0 + light.linear * fragDist + light.quadratic * ( fragDist * fragDist ) );
-
+	attenuation = 1.0;
     vec3 result = vec3(0);
     
     diffuse *= attenuation * intensity;
     specular *= attenuation * intensity;
-    result = (diffuse + specular) * light.color; 
+    
+	
+	// -- Shadow -- //
+	vec4 lightFragPos = spotLightSpaceMatrices[lightID] * vec4(vFragPos, 1.0);
+
+	float shadow = CalcShadow(lightFragPos , normal, lightDir);
+
+
+	
+	result = (1.0-shadow) * (diffuse + specular) * light.color; 
 	return result;
 }

@@ -6,11 +6,6 @@
 #include "Camera.h"
 #include "Light.h"
 
-struct BufferList{
-	unsigned int	shadowMapFBO;
-	unsigned int	depthMapImage;
-};
-
 class Renderer {
 public:
 	Renderer();
@@ -23,7 +18,8 @@ private:
 	class Shader*	staticShader;
 	class Shader*	dynamicShader;
 	class Shader*	lightShader;
-	class Shader* staticShadowShader;
+	class Shader*	staticShadowShader;
+	class Shader*	staticCubeMapShadowShader;
 	class Shader*	debugDepthQuadShader;
 
 
@@ -37,6 +33,10 @@ private:
 	unsigned int	shadowMapFBO;
 	unsigned int	depthMapImage;
 
+	unsigned int	cubeShadowMapFBO;
+	unsigned int	cubeDepthMapImage;
+	unsigned int	cubeMapImage;
+
 	bool			showNormalMap;
 	bool			showSpecularMap;
 
@@ -45,4 +45,6 @@ private:
 	void			ShadowDrawModelR(Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
 	void			InitLights( std::vector<Light> lights );
 	void			BindTextures( Mesh* mesh );
+	void			CreateDepthMap();
+	void			CreateCubeMap();
 };

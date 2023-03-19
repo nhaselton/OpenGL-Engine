@@ -8,5 +8,5 @@ out vec3 vWorld;
 void main()
 {   
 		vWorld = vec3(model * vec4(aPos,1.0));
-	  gl_Position = lightSpaceMatrix * model * vec4(aPos, 1.0);
+		gl_Position = lightSpaceMatrix * model * vec4(aPos, 1.0);
 }
