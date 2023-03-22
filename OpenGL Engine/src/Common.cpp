@@ -70,11 +70,10 @@ void Common::Init() {
 	Light directional {};
 	directional.lType = LIGHT_DIRECTIONAL;
 	directional.color = glm::vec3( 1 );
-	directional.pos = glm::vec3( -6.4,10.9,-0.6);
-	directional.direction = glm::vec3( -0.9,-0.5,0.0);
-	//lights.push_back( directional );
+	directional.pos = glm::vec3( -8.3,14.2,-0.8);
+	directional.direction = glm::vec3( -0.7,-0.7,-0.1);
+	lights.push_back( directional );
 
-	//camera.transform.SetPosition( directional.pos );
 	//camera.transform.SetRotation( directional.direction );
 
 	Light spot;

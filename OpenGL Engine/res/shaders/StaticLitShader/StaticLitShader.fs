@@ -13,29 +13,29 @@ struct Light {
 	int	  ID;
 };
 
+//Samplers
 uniform sampler2D albedo;
 uniform sampler2D specularMap;
 uniform sampler2D normalMap;
 uniform sampler2D shadowMap;
 uniform samplerCube cubeMap;
 
+//Lights
+
 uniform Light pointLights[32];
 uniform Light spotLights[32];
 uniform Light directionalLight;
 
+uniform mat4 directionalLightSpaceMatrix;
+uniform mat4[32] spotLightSpaceMatrices;
+
 uniform int numPointLights;
 uniform int numSpotLights;
 
-uniform float maxBias;
-
+//Others
 uniform vec3 viewPos;
-
-
-//in vec4 directionalLightLightFragPos;
-
-uniform mat4 directionalLightSpaceMatrix;
-uniform mat4[32] pointLightSpaceMatrices;
-uniform mat4[32] spotLightSpaceMatrices;
+uniform bool showNormalMap;
+uniform bool showSpecularMap;
 
 
 
@@ -46,8 +46,6 @@ in vec3 vWorldSpace;
 in mat3 TBN;
 //in vec4 vFragLightSpace;
 
-uniform bool showNormalMap;
-uniform bool showSpecularMap;
 
 vec3 CalcDirectional(vec3 normal, float specular);
 vec3 CalcPointLights(Light light, vec3 normal ,float specular);
@@ -84,16 +82,16 @@ void main(){
 	//	3. spotLights
 
 	//Directional Light
-	//result += CalcDirectional( normal,specular );
+	result += CalcDirectional( normal,specular );
 
 	//Point Lights
 	for ( int i =0 ; i < numPointLights; i++ )
 		result += CalcPointLights(pointLights[i], normal, specular );
 
 	//Spot Lights
-	//for ( int i =0; i < numSpotLights; i++ )
-	//	result += CalcSpotLights(spotLights[i], normal, specular, i );
-
+	for ( int i =0; i < numSpotLights; i++ )
+		result += CalcSpotLights(spotLights[i], normal, specular, i );
+	result += vec3(.05f);//ambient
 	result *= color;
 
 	FragColor = vec4(result,1.0);
@@ -109,18 +107,14 @@ float CalcShadow(vec4 fragLightSpace, vec3 normal, vec3 lightDir){
     float currentDepth = projCoords.z;
     // check whether current frag pos is in shadow
 	
-	
-	// == Shadow Bias == //
-
-	float minBias = maxBias/10;
-	//float bias = max(.05 * (1.0 - dot(normal, lightDir)), .005);  
-	float bias = max(maxBias * (1.0 - dot(normal, lightDir)), minBias);  
-	float biasShadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
-
+	//out of map is shadow
+	if( projCoords.z > 1.0)
+		return 1;
 
 	// == Brute Force Shadow Sampler == //
+	float bias = .05;
 	float sampleShadow = 0.0;
-	vec2 texelSize = 1.0 / vec2(2048,2048);//textureSize(shadowMap, 0);
+	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
 	
 	for(int x = -1; x <= 1; x++) {
 		for(int y = -1; y <= 1; y++) {
@@ -129,12 +123,8 @@ float CalcShadow(vec4 fragLightSpace, vec3 normal, vec3 lightDir){
 		}
 	}
 	sampleShadow /= 9.0;
-
-
-	if ( showSpecularMap)
-		return sampleShadow;
-	else
-		return biasShadow;
+	
+	return sampleShadow;
 }
 
 
@@ -143,7 +133,7 @@ float CalcCubeShadow(Light light, vec3 fragPos){
     float closestDepth = texture(cubeMap, fragToLight).r;
 	closestDepth *= light.farPlane;  
 	float currentDepth = length(fragToLight);  
-	float shadow = currentDepth > closestDepth ? 1.0 : 0.0; 
+	float shadow = currentDepth > closestDepth ? 1.0 : 0.0;     
 
 	// == Brute Force Shadow Sampler == //
 	//float shadow  = 0.0;
@@ -181,7 +171,9 @@ vec3 CalcDirectional(vec3 normal ,float specular){
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32) * specular;
 
 	vec4 directionalLightLightFragPos = directionalLightSpaceMatrix * vec4(vFragPos, 1.0);
-	float shadow = CalcShadow(directionalLightLightFragPos, normal, lightDir);
+	float shadow = CalcShadow(directionalLightLightFragPos, normal, -lightDir);
+
+	diffuse = 1;
 
 	result = (1.0 - shadow) * diffuse *   directionalLight.color;
 	return result;

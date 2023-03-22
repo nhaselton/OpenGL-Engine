@@ -24,10 +24,10 @@ Renderer::Renderer() {
 	showSpecularMap = true;
 }
 
-const unsigned int SHADOW_WIDTH = 512, SHADOW_HEIGHT = 512;
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 void Renderer::Init( Window* window, Camera* camera ) {
-	//CreateDepthMap();
+	CreateDepthMap();
 	CreateCubeMap();
 	
 	this->window = window;
@@ -42,9 +42,6 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
 	glEnable( GL_DEPTH_TEST );
-
-
-
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -64,15 +61,17 @@ void Renderer::Init( Window* window, Camera* camera ) {
 
 void Renderer::CreateDepthMap() {
 	glGenFramebuffers( 1, &shadowMapFBO );
-	// create depth texture
+
 	glGenTextures( 1, &depthMapImage );
 	glBindTexture( GL_TEXTURE_2D, depthMapImage );
 	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
-	// attach depth texture as FBO's depth buffer
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
+	float borderColor[] = { 0, 0, 0, 1.0f };
+	glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
+
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapImage, 0 );
 	glDrawBuffer( GL_NONE );
@@ -83,7 +82,7 @@ void Renderer::CreateDepthMap() {
 
 void Renderer::CreateCubeMap() {
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-	glGenFramebuffers( 1, &shadowMapFBO );
+	glGenFramebuffers( 1, &cubeShadowMapFBO );
 	// create depth cubemap texture
 	glGenTextures( 1, &depthCubeMap );
 	glBindTexture( GL_TEXTURE_CUBE_MAP, depthCubeMap );
@@ -95,7 +94,7 @@ void Renderer::CreateCubeMap() {
 	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
 	// attach depth texture as FBO's depth buffer
-	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
+	glBindFramebuffer( GL_FRAMEBUFFER, cubeShadowMapFBO );
 	glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubeMap, 0 );
 	glDrawBuffer( GL_NONE );
 	glReadBuffer( GL_NONE );
@@ -156,19 +155,34 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	staticShader->SetInt( "cubeMap", 5 );
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 
-
-
 	DrawModelR( staticShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode],glm::mat4(1.0) );
+	DrawSecondWindowShadowMap();
+
+	if ( Input::keys[GLFW_KEY_SPACE] ) {
+		lights[1].pos = camera->transform.Position();
+		lights[1].direction = camera->GetForward();
+	}
 }
 
-void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities ) {
 
+void Renderer::DrawSecondWindowShadowMap(){
+#if SECOND_WINDOW
+
+	glfwMakeContextCurrent( window->window2 );
+	
+
+	
+
+	glfwMakeContextCurrent( window->GetHandle());
+
+#endif
 }
+
 
 void Renderer::DrawPointLight(Light& light, std::vector<Entity>& entities) {
 	//Shadowpass
 	glViewport( 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT );
-	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
+	glBindFramebuffer( GL_FRAMEBUFFER, cubeShadowMapFBO );
 	glClear( GL_DEPTH_BUFFER_BIT );
 
 	float aspect = ( float ) SHADOW_WIDTH / ( float ) SHADOW_HEIGHT;
@@ -209,6 +223,29 @@ void Renderer::DrawPointLight(Light& light, std::vector<Entity>& entities) {
 		}
 	}
 }
+
+void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities ) {
+	glViewport( 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT );
+	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
+	glClear( GL_DEPTH_BUFFER_BIT );
+
+
+	float near_plane = 1.0f, far_plane = 25;
+	glm::mat4 lightProjection = glm::ortho( -15.0f, 15.0f, -15.0f, 15.0f, near_plane, far_plane );
+	glm::mat4 view = glm::lookAt(light.pos, light.pos + light.direction, glm::vec3(0,1,0));
+	
+	glm::mat4 lightSpaceMatrix = lightProjection * view;
+	staticShadowShader->Use();
+	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
+	light.lightSpaceMatrix = lightSpaceMatrix;
+
+	DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
+
+
+	glActiveTexture( GL_TEXTURE4 );
+	glBindTexture( GL_TEXTURE_2D, depthMapImage );
+}
+
 
 void Renderer::BindTextures( Mesh* mesh ) {
 	if ( mesh->diffuseTexture != nullptr ) {
@@ -302,6 +339,7 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 				shader->SetVec3( "directionalLight.color", lights[i].color );
 				shader->SetVec3( "directionalLight.pos", lights[i].pos );
 				shader->SetVec3( "directionalLight.direction", lights[i].direction );
+				shader->SetMat4( "directionalLightSpaceMatrix", lights[i].lightSpaceMatrix );
 
 			}
 

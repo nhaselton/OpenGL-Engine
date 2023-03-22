@@ -23,4 +23,8 @@ struct Light {
 
 	//Point light shadows
 	float farPlane;
+
+	//shadow matrix
+	bool hasShadow;
+	glm::mat4 lightSpaceMatrix;
 };
