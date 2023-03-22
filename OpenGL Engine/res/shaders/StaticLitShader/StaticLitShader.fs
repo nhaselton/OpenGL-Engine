@@ -9,6 +9,7 @@ struct Light {
 	float quadratic;
 	float cutoff;
 	float outerCutoff;
+	float farPlane;
 	int	  ID;
 };
 
@@ -53,7 +54,7 @@ vec3 CalcPointLights(Light light, vec3 normal ,float specular);
 vec3 CalcSpotLights(Light light, vec3 normal ,float specular,int lightID);
 float CalcShadow(vec4 fragLightSpace, vec3 normal, vec3 lightDir);
 vec3 ShadowOffsetLookUp(sampler2D map, vec4 loc, vec2 offset);
-float CalcCubeMapShadow(vec3 lightPos);
+float CalcCubeShadow(Light light, vec3 fragPos);
 
 
 void main(){
@@ -83,32 +84,20 @@ void main(){
 	//	3. spotLights
 
 	//Directional Light
-	//result += CalcDirectional( normal,specular );
+	result += CalcDirectional( normal,specular );
 
 	//Point Lights
 	for ( int i =0 ; i < numPointLights; i++ )
 		result += CalcPointLights(pointLights[i], normal, specular );
 
 	//Spot Lights
-	//for ( int i =0; i < numSpotLights; i++ )
-	//	result += CalcSpotLights(spotLights[i], normal, specular, i );
+	for ( int i =0; i < numSpotLights; i++ )
+		result += CalcSpotLights(spotLights[i], normal, specular, i );
 
 	result *= color;
+
 	FragColor = vec4(result,1.0);
 }
-
-float CalcCubeMapShadow( vec3 lightPos ){
-	float dist =  length( vFragPos - lightPos );
-	lightPos.y =  -lightPos.y;//invert Y becuse cubemaps change coord spaces 
-	float cubeDist = texture(cubeMap, lightPos).r;
-
-	if (cubeDist < dist)
-		return 0;
-	else
-		return 1;
-}
-
-
 
 float CalcShadow(vec4 fragLightSpace, vec3 normal, vec3 lightDir){
 	vec3 projCoords = fragLightSpace.xyz / fragLightSpace.w;
@@ -149,6 +138,36 @@ float CalcShadow(vec4 fragLightSpace, vec3 normal, vec3 lightDir){
 }
 
 
+float CalcCubeShadow(Light light, vec3 fragPos){
+	vec3 fragToLight = vFragPos - light.pos; 
+    float closestDepth = texture(cubeMap, fragToLight).r;
+	closestDepth *= light.farPlane;  
+	float currentDepth = length(fragToLight);  
+	float shadow = currentDepth > closestDepth ? 1.0 : 0.0; 
+
+	// == Brute Force Shadow Sampler == //
+	//float shadow  = 0.0;
+	float bias    = 0.05; 
+	float samples = 4.0;
+	float offset  = 0.1;
+	for(float x = -offset; x < offset; x += offset / (samples * 0.5))
+	{
+		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
+		{
+			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
+			{
+				float closestDepth = texture(cubeMap, fragToLight + vec3(x, y, z)).r; 
+				closestDepth *= light.farPlane;   // undo mapping [0;1]
+				if(currentDepth - bias > closestDepth)
+					shadow += 1.0;
+			}
+		}
+	}
+	shadow /= (samples * samples * samples);
+
+	return shadow;
+}
+
 vec3 CalcDirectional(vec3 normal ,float specular){
 	vec3 result = vec3(0);
 	vec3 norm = normalize(normal);
@@ -183,12 +202,9 @@ vec3 CalcPointLights(Light light ,vec3 normal ,float specular){
 	diffuse *= attenuation;
 	specular *= attenuation;
 
+	float shadow = CalcCubeShadow(light,vFragPos);
 
-	//Shadows
-	float shadow = CalcCubeMapShadow(light.pos);
-
-
-    vec3 result = (1.0 -shadow) * vec3(diffuse + spec ) * light.color;
+    vec3 result = (1.0 - shadow) * vec3(diffuse + spec ) * light.color;
 	return result;
 }
 

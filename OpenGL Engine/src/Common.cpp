@@ -62,10 +62,11 @@ void Common::Init() {
 	pointLight.color = glm::vec3( 1, 1, 1 );
 	pointLight.direction = camera.GetForward();
 	pointLight.linear = 0.022;
-	pointLight.pos = glm::vec3( -.3, 1.7, -.3f );
+	pointLight.pos = glm::vec3( 1.4, 2, -.1f );
 	pointLight.quadratic = 0.019;
+	pointLight.farPlane = 15.0f;
 	lights.push_back( pointLight );
-
+	
 	Light directional {};
 	directional.lType = LIGHT_DIRECTIONAL;
 	directional.color = glm::vec3( 1 );
@@ -77,7 +78,7 @@ void Common::Init() {
 	//camera.transform.SetRotation( directional.direction );
 
 	Light spot;
-	spot.lType = LIGHT_SPOT;
+	spot.lType = LIGHT_SPOT;	
 	spot.color = glm::vec3( 1, 1, 1 );
 	spot.cutoff = glm::cos( glm::radians( 12.0f ) );
 	spot.linear = 0.022;
@@ -107,19 +108,19 @@ void Common::UpdateInput() {
 	}
 
 	if ( Input::keys[GLFW_KEY_W] ) {
-		camera.transform.Translate( camera.GetForward()  * .001f);
+		camera.transform.Translate( camera.GetForward()  * .01f);
 	}
 	
 	if ( Input::keys[GLFW_KEY_S] ) {
-		camera.transform.Translate( -camera.GetForward() * .001f );
+		camera.transform.Translate( -camera.GetForward() * .01f );
 	}
 	
 	if ( Input::keys[GLFW_KEY_A] ) {
-		camera.transform.Translate( -glm::cross(camera.GetForward(), glm::vec3(0,1,0)) * .001f );
+		camera.transform.Translate( -glm::cross(camera.GetForward(), glm::vec3(0,1,0)) * .01f );
 	}
 	
 	if ( Input::keys[GLFW_KEY_D] ) {
-		camera.transform.Translate( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * .001f );
+		camera.transform.Translate( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * .01f );
 	}
 
 	if ( Input::keys[GLFW_KEY_LEFT] ) {

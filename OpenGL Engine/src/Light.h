@@ -20,4 +20,7 @@ struct Light {
 	//cutoff
 	float cutoff;//12.5f
 	float outerCutoff;//17.5f
+
+	//Point light shadows
+	float farPlane;
 };

@@ -26,9 +26,9 @@
     6) static "Ubershader"  ( Done ) 
     7) Skeletal Animation ( Done ) 
     8) Shadow types Static
-        a) directional (Close)
+        a) directional ( Done )
         b) point
-        c) spot
+        c) spot ( Done )
     9) Multiple Shader casters, increase size of lightview matrix
     10) Shadow Types Dynamic
         a) 

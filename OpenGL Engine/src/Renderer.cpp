@@ -1,4 +1,4 @@
-#include "Renderer.h"
+﻿#include "Renderer.h"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #include "glm/gtx/projection.hpp"
@@ -20,22 +20,21 @@ float bias;
 Renderer::Renderer() {
 	index = 0;
 	bias = 0;
-	showNormalMap = false;
+	showNormalMap = true;
 	showSpecularMap = true;
-
-
 }
 
-
-const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+const unsigned int SHADOW_WIDTH = 512, SHADOW_HEIGHT = 512;
 
 void Renderer::Init( Window* window, Camera* camera ) {
+	//CreateDepthMap();
+	CreateCubeMap();
+	
 	this->window = window;
-
 	dynamicShader = new Shader( "res/shaders/skeletalShader" );
 	staticShader = new Shader( "res/shaders/StaticLitShader" );
 	staticShadowShader = new Shader( "res/shaders/staticshadowshader" );
-	staticCubeMapShadowShader = new Shader( "res/shaders/staticCubeMapShadowShader" );
+	staticCubeMapShadowShader = new Shader( "res/shaders/staticCubeMapShadowShader/StaticCubeMapShadowShader.vs","res/shaders/staticCubeMapShadowShader/StaticCubeMapShadowShader.fs" , "res/shaders/staticCubeMapShadowShader/StaticCubeMapShadowShader.gs", 1, 1 );
 	lightShader = new Shader( "res/shaders/lightShader" );
 	debugDepthQuadShader = new Shader( "res/shaders/depthShader" );
 
@@ -45,8 +44,6 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	glEnable( GL_DEPTH_TEST );
 
 
-	//CreateDepthMap();
-	CreateCubeMap();
 
 
 	IMGUI_CHECKVERSION();
@@ -80,11 +77,29 @@ void Renderer::CreateDepthMap() {
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapImage, 0 );
 	glDrawBuffer( GL_NONE );
 	glReadBuffer( GL_NONE );
+	
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 }
 
 void Renderer::CreateCubeMap() {
-
+	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+	glGenFramebuffers( 1, &shadowMapFBO );
+	// create depth cubemap texture
+	glGenTextures( 1, &depthCubeMap );
+	glBindTexture( GL_TEXTURE_CUBE_MAP, depthCubeMap );
+	for ( unsigned int i = 0; i < 6; ++i )
+		glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
+	// attach depth texture as FBO's depth buffer
+	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
+	glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubeMap, 0 );
+	glDrawBuffer( GL_NONE );
+	glReadBuffer( GL_NONE );
+	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 }
 
 
@@ -120,8 +135,81 @@ void Renderer::BeginFrame() {
 #include "Input.h"
 void renderQuad();
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
+	DrawPointLight( lights[1], entities );
+	DrawDirectionalLight( lights[0], entities );
+	
+	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
+	glViewport( 0, 0, 1280, 720 );
+	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
+	glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
+		
+	glActiveTexture( GL_TEXTURE5 );
+	glBindTexture( GL_TEXTURE_CUBE_MAP, depthCubeMap );
+	
+	InitLights( lights );
+	staticShader->Use();
+	staticShader->SetMat4( "view", camera->GetView() );
+	staticShader->SetMat4( "projection", projection );
+	staticShader->SetBool( "showNormalMap", showNormalMap );
+	staticShader->SetBool( "showSpecularMap", showSpecularMap );
+	staticShader->SetInt( "depthMap", 4 );
+	staticShader->SetInt( "cubeMap", 5 );
+	staticShader->SetVec3( "viewPos", camera->transform.Position() );
+
+
+
+	DrawModelR( staticShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode],glm::mat4(1.0) );
+}
+
+void DrawDirectionalLight( Light& light, std::vector<Entity>& entities ) {
 
 }
+
+void Renderer::DrawPointLight(Light& light, std::vector<Entity>& entities) {
+	//Shadowpass
+	glViewport( 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT );
+	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
+	glClear( GL_DEPTH_BUFFER_BIT );
+
+	float aspect = ( float ) SHADOW_WIDTH / ( float ) SHADOW_HEIGHT;
+	float near = 1.0f;
+	glm::mat4 shadowProj = glm::perspective( glm::radians( 90.0f ), aspect, near, light.farPlane );
+	std::vector<glm::mat4> shadowTransforms;
+	glm::vec3 lightPos = light.pos;
+	
+	shadowTransforms.push_back( shadowProj *
+		glm::lookAt( lightPos, lightPos + glm::vec3( 1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+	shadowTransforms.push_back( shadowProj *
+		glm::lookAt( lightPos, lightPos + glm::vec3( -1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+	shadowTransforms.push_back( shadowProj *
+		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 1.0, 0.0 ), glm::vec3( 0.0, 0.0, 1.0 ) ) );
+	shadowTransforms.push_back( shadowProj *
+		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, -1.0, 0.0 ), glm::vec3( 0.0, 0.0, -1.0 ) ) );
+	shadowTransforms.push_back( shadowProj *
+		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, 1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+	shadowTransforms.push_back( shadowProj *
+		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, -1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+
+	staticCubeMapShadowShader->Use();
+	staticCubeMapShadowShader->SetFloat( "far_plane", light.farPlane );
+	staticCubeMapShadowShader->SetVec3( "lightPos", lightPos );
+
+	for ( int i = 0; i < 6; i++ ) {
+		staticCubeMapShadowShader->SetMat4( "shadowMatrices[" + std::to_string( i ) + "]", shadowTransforms[i] );
+	}
+	for ( int i = 0; i < entities[0].model->nodes.size(); i++ ) {
+		glm::mat4 matrix = entities[0].model->nodes[i].t.Matrix();
+
+		for ( int n = 0; n < entities[0].model->nodes[i].meshIndices.size(); n++ ) {
+			Mesh& mesh = entities[0].model->meshes[entities[0].model->nodes[i].meshIndices[n]];
+			staticCubeMapShadowShader->SetMat4( "model", matrix );
+
+			mesh.BindVAO();
+			glDrawElements( GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_SHORT, ( void* ) 0 );
+		}
+	}
+}
+
 void Renderer::BindTextures( Mesh* mesh ) {
 	if ( mesh->diffuseTexture != nullptr ) {
 		glActiveTexture( GL_TEXTURE0 );
@@ -138,18 +226,16 @@ void Renderer::BindTextures( Mesh* mesh ) {
 	}
 }
 
-void Renderer::DrawModelR( Model* model, Node* node, glm::mat4 parent ) {
-	Shader* shader = ( model->isStatic ) ? staticShader : dynamicShader;
+void Renderer::DrawModelR( Shader* shader, Model* model, Node* node, glm::mat4 parent ) {
 	shader->Use();
 	// Convert to model space
-	//glm::mat4 modelSpace = parent * node->computedOffset;
-	//
-	//glm::mat4 jointSpace = modelSpace * node->inverseBind;
+	glm::mat4 modelSpace = parent * node->computedOffset;
+	glm::mat4 jointSpace = modelSpace * node->inverseBind;
 
 
-	//if ( node->isJoint ) {
-	//	shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]", jointSpace );
-	//}
+	if ( node->isJoint ) {
+		shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]", jointSpace );
+	}
 
 	//TODO ADD THE ENTITY TRANSLATION TOO! (probably just make it parent's TRS)
 	for ( int i = 0; i < node->meshIndices.size(); i++ ) {
@@ -185,24 +271,9 @@ void Renderer::DrawModelR( Model* model, Node* node, glm::mat4 parent ) {
 		}
 
 	}
-	/*
-	// =========== Draw Lights ============= //
-	lightShader->Use();
-	lightShader->SetMat4( "projection", projection );
-	lightShader->SetMat4( "view", camera->GetView() );
-
-	Mesh* cube = &ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" )->meshes[0];
-	cube->BindVAO();
-	glm::mat4 _model = node->computedOffset;
-	_model *= glm::scale( glm::mat4( 1.0 ), glm::vec3( .1f ) );
-	lightShader->SetMat4( "model", _model );
-	lightShader->SetVec3( "color", glm::vec3( 1, 0, 0 ) );
-	//glDrawElements( GL_TRIANGLES, cube->numIndices, GL_UNSIGNED_SHORT, ( void* ) ( 0 ) );
-//}
-	*/
 
 	for ( int n = 0; n < node->children.size(); n++ ) {
-		DrawModelR( model, node->children[n], glm::mat4( 1.0 ) );
+		DrawModelR( shader,model, node->children[n], glm::mat4( 1.0 ) );
 	}
 }
 
@@ -243,7 +314,9 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 				shader->SetFloat( prefix + "linear", lights[i].linear );
 				shader->SetFloat( prefix + "quadratic", lights[i].quadratic );
 				shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
+				shader->SetFloat( prefix + "farPlane", lights[i].farPlane);
 				shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
+
 			}
 
 			else if ( lights[i].lType == LIGHT_SPOT ) {
@@ -261,30 +334,6 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 
 		shader->SetInt( "numPointLights", numPointLights );
 		shader->SetInt( "numSpotLights", numSpotLights );
-	}
-}
-
-
-void Renderer::ShadowDrawModelR( Model* model, Node* node, glm::mat4 parent ) {
-	Shader* shader = staticShadowShader;
-	shader->Use();
-
-	// Convert to model space
-	for ( int i = 0; i < node->meshIndices.size(); i++ ) {
-		Mesh* mesh = &model->meshes[node->meshIndices[i]];//node->meshes[i];
-		mesh->BindVAO();
-		shader->SetMat4( "model", glm::mat4( 1.0 ) );
-
-		if ( mesh->numIndices != 0 ) {
-			glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
-		}
-		else {
-			glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );
-		}
-
-		for ( int n = 0; n < node->children.size(); n++ ) {
-			ShadowDrawModelR( model, node->children[n], glm::mat4( 1.0 ) );
-		}
 	}
 }
 
@@ -337,103 +386,3 @@ void ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 p
 	for ( int i = 0; i < node->children.size(); i++ )
 		ComputeHierarchy( animation, index, node->children[i], node->computedOffset );
 }
-/*
-
-
-	/*
-	//BASIC TEST
-
-	return;
-	InitLights( lights );
-
-	dynamicShader->Use();
-	dynamicShader->SetMat4( "view", camera->GetView() );//camera->GetView() );
-	dynamicShader->SetMat4( "projection", projection );
-	dynamicShader->SetVec3( "viewPos", camera->transform.Position() );
-	dynamicShader->SetBool( "showNormalMap", showNormalMap );
-	dynamicShader->SetBool( "showSpecularMap", showSpecularMap );
-
-	staticShader->Use();
-	staticShader->SetBool( "showNormalMap", showNormalMap );
-	staticShader->SetBool( "showSpecularMap", showSpecularMap );
-	staticShader->SetMat4( "view", camera->GetView() );//camera->GetView() );
-	staticShader->SetMat4( "projection", projection );
-	staticShader->SetVec3( "viewPos", camera->transform.Position() );
-
-
-	float near_plane = .1f, far_plane = 20.0f;
-	glm::mat4 lightProjection = glm::ortho( -20.0f, 20.0f, -20.0f, 20.0f, near_plane, far_plane );
-
-
-
-	//glm::mat4 lightView = glm::lookAt( glm::vec3( -2.0f, 4.0f, -1.0f ),
-	//	glm::vec3( 0.0f, 0.0f, 0.0f ),
-	//	glm::vec3( 0.0f, 1.0f, 0.0f ) );
-
-	//glm::mat4 lightView = glm::lookAt( lights[0].pos, lights[0].pos + lights[0].direction, glm::vec3( 0, 1, 0 ) );
-
-
-	glm::vec3 directonal = lights[0].direction;
-	directonal.x = cos( directonal.y ) * cos( directonal.x );
-	directonal.y = sin( directonal.x );
-	directonal.z = sin( directonal.y ) * cos( directonal.x );
-	directonal = glm::normalize( directonal );
-
-	//Lookat
-	glm::mat4 lightView = glm::lookAt( lights[0].pos, lights[0].pos + directonal, glm::vec3( 0, 1, 0 ) );
-
-	glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-
-
-	// ==================================  //
-	// ======== SHADOW PASS ============= //
-	// ================================== //
-	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
-	glClear( GL_DEPTH_BUFFER_BIT );
-	staticShadowShader->Use();
-	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
-	ComputeHierarchy( nullptr, 0, &entities[0].model->nodes[entities[0].model->rootNode] );
-	ShadowDrawModelR( entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode] );
-
-	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ); // also clear the depth buffer now!
-
-	staticShader->Use();
-	staticShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
-	staticShader->SetInt( "shadowMap", 4 );
-	glActiveTexture( GL_TEXTURE4 );
-	glBindTexture( GL_TEXTURE_2D, depthMapImage );
-	//glBindTexture( GL_TEXTURE_2D, buffers.depthMapImage );
-	// ================= //
-	// ====== DRAW ===== //
-	// ================= //
-
-
-	//debugDepthQuadShader->Use();
-	//debugDepthQuadShader->SetInt( "depthMap", 4 );
-	//debugDepthQuadShader->SetFloat( "near_plane", near_plane );
-	//debugDepthQuadShader->SetFloat( "far_plane", far_plane);
-	//glActiveTexture( GL_TEXTURE4 );
-	//glBindTexture( GL_TEXTURE_2D, depthMapImage );
-	//renderQuad( );
-	//return;
-
-
-	for ( int m = 0; m < entities.size(); m++ ) {
-		if ( entities[m].model == nullptr )
-			continue;
-		if ( entities[m].model->isStatic ) {
-			ComputeHierarchy( nullptr, 0, &entities[m].model->nodes[entities[m].model->rootNode] );
-			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode] );
-		}
-		else {
-			Animation* a;
-			a = ResourceManager::Get().GetAnimation( "idle" );
-			a = ResourceManager::Get().GetAnimation( "run_forward.003" );
-			//			a = nullptr;
-			ComputeHierarchy( a, 0, &entities[m].model->nodes[entities[m].model->rootNode] );
-			DrawModelR( entities[m].model, &entities[m].model->nodes[entities[m].model->rootNode], glm::scale( glm::mat4( 1.0 ), glm::vec3( .5f ) ) );
-		}
-	}
-	*/

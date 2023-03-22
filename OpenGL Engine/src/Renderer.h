@@ -32,17 +32,16 @@ private:
 	//BufferList		buffers;
 	unsigned int	shadowMapFBO;
 	unsigned int	depthMapImage;
-
-	unsigned int	cubeShadowMapFBO;
-	unsigned int	cubeDepthMapImage;
-	unsigned int	cubeMapImage;
+	
+	unsigned int	depthCubeMap;
 
 	bool			showNormalMap;
 	bool			showSpecularMap;
 
 private:
-	void			DrawModelR(Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
-	void			ShadowDrawModelR(Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
+	void			DrawModelR( Shader* shader, Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
+	void			DrawPointLight( Light& light , std::vector<Entity>& entities );
+	void			DrawDirectionalLight( Light& light , std::vector<Entity>& entities );
 	void			InitLights( std::vector<Light> lights );
 	void			BindTextures( Mesh* mesh );
 	void			CreateDepthMap();

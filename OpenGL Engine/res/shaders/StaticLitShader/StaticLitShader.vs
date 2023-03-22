@@ -13,10 +13,6 @@ out vec3 vFragPos;
 out vec3 vNormal;
 out mat3 TBN;
 
-uniform int numPointLights;
-uniform int numSpotLights;
-
-
 //out vec4 directionalLightLightFragPos;
 
 
