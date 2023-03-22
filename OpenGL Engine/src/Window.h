@@ -12,10 +12,6 @@ public:
 	int						GetWidth()	{ return width; }
 	int						GetHeight()	 { return height; }
 
-#if SECOND_WINDOW
-	GLFWwindow* window2;
-#endif
-
 private:
 	struct GLFWwindow*		handle;
 	int						width;

@@ -11,7 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-/* TODO LIST BY 3/19 */
+/* TODO LIST BY THE TIME I DIE */
 /*
     1) Textures (Done)
     2) Lighting (Done)
@@ -27,14 +27,17 @@
     7) Skeletal Animation ( Done ) 
     8) Shadow types Static
         a) directional ( Done )
+        b) point ( Done )
+        c) spot (Fix)
+    9) different sized shadow casters
+    10) Multiple Shader casters
+    11) Basic Shadow Atlas
+    11.5) Depth prepass?
+    12) Shadow Types Dynamic
+        a) directional
         b) point
-        c) spot ( Done )
-    9) Multiple Shader casters, increase size of lightview matrix
-    10) Shadow Types Dynamic
-        a) 
-        b) 
-        c) 
-   11) Animated shadow casted Imp inside of sponza 
+        c) spot
+   13) Animated shadow casted Imp inside of sponza 
 */
 
 int main( void ) {

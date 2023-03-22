@@ -36,16 +36,21 @@ private:
 	unsigned int	cubeShadowMapFBO;
 	unsigned int	depthCubeMap;
 
+	unsigned int	shadowAtlasFBO;
+	unsigned int	shadowAtlasImage;
+
+
 	bool			showNormalMap;
 	bool			showSpecularMap;
+	bool			showShadowAtlas;
 
 private:
 	void			DrawModelR( Shader* shader, Model* model, Node* root , glm::mat4 parent = glm::mat4(1.0));
 	void			DrawPointLight( Light& light , std::vector<Entity>& entities );
 	void			DrawDirectionalLight( Light& light , std::vector<Entity>& entities );
-	void			DrawSecondWindowShadowMap();
 	void			InitLights( std::vector<Light> lights );
 	void			BindTextures( Mesh* mesh );
 	void			CreateDepthMap();
 	void			CreateCubeMap();
+	void			CreateShadowAtlas();
 };

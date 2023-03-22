@@ -16,14 +16,9 @@ void Window::Init() {
     width = 1280;
     height = 720;
 
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 4 );
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
-
-    //create second window first so the renderer one with input appears on top
-#if SECOND_WINDOW
-    window2 = glfwCreateWindow( width, height, "Show Shadows", NULL, NULL );
-#endif
 
     handle = glfwCreateWindow( width, height, "Hello World", NULL, NULL );
     glfwSetWindowUserPointer( handle, this );
@@ -39,6 +34,9 @@ void Window::Init() {
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
     }
+
+
+    glfwMakeContextCurrent( handle );
 
     glfwSwapInterval( 0 );
 

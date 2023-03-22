@@ -29,6 +29,7 @@ const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 void Renderer::Init( Window* window, Camera* camera ) {
 	CreateDepthMap();
 	CreateCubeMap();
+	CreateShadowAtlas();
 	
 	this->window = window;
 	dynamicShader = new Shader( "res/shaders/skeletalShader" );
@@ -57,6 +58,30 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticShader->SetInt( "shadowMap", 4 );
 	staticShader->SetInt( "cubeMap", 5 );
 
+}
+
+void Renderer::CreateShadowAtlas() {
+	glGenFramebuffers( 1, &shadowAtlasFBO );
+
+	glGenTextures( 1, &shadowAtlasImage );
+	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 8096, 8096, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
+	float borderColor[] = { 0, 0, 0, 1.0f };
+	glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
+
+	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
+	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowAtlasImage, 0 );
+	glDrawBuffer( GL_NONE );
+	glReadBuffer( GL_NONE );
+
+	if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
+		std::cout << "Shadow atlas frame buffer not complete";
+
+	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 }
 
 void Renderer::CreateDepthMap() {
@@ -114,7 +139,9 @@ void Renderer::BeginFrame() {
 	ImGui::Begin( "Show Normals" );
 	ImGui::Checkbox( "use NormalMap?", &showNormalMap );
 	ImGui::Checkbox( "use SpecularMap?", &showSpecularMap );
+	ImGui::Checkbox( "Show Shadow Atlas?", &showShadowAtlas);
 	ImGui::End();
+
 
 	ImGui::Begin( "Camera info" );
 	ImGui::Text( "Position:  (%.1lf, %.1lf, %.1lf)", camera->transform.Position().x, camera->transform.Position().y, camera->transform.Position().z );
@@ -141,7 +168,18 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glViewport( 0, 0, 1280, 720 );
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
 	glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
-		
+	
+	if ( showShadowAtlas ) {
+		glActiveTexture( GL_TEXTURE15 );
+		glBindTexture( GL_TEXTURE_2D, shadowAtlasImage);
+		debugDepthQuadShader->Use();
+		debugDepthQuadShader->SetFloat( "near_plane", 1 );
+		debugDepthQuadShader->SetInt( "depthMap", 16 );
+		debugDepthQuadShader->SetFloat( "far_plane", 25 );
+		renderQuad();
+		return;
+	}
+
 	glActiveTexture( GL_TEXTURE5 );
 	glBindTexture( GL_TEXTURE_CUBE_MAP, depthCubeMap );
 	
@@ -156,28 +194,12 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 
 	DrawModelR( staticShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode],glm::mat4(1.0) );
-	DrawSecondWindowShadowMap();
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
 		lights[1].pos = camera->transform.Position();
 		lights[1].direction = camera->GetForward();
 	}
 }
-
-
-void Renderer::DrawSecondWindowShadowMap(){
-#if SECOND_WINDOW
-
-	glfwMakeContextCurrent( window->window2 );
-	
-
-	
-
-	glfwMakeContextCurrent( window->GetHandle());
-
-#endif
-}
-
 
 void Renderer::DrawPointLight(Light& light, std::vector<Entity>& entities) {
 	//Shadowpass
@@ -211,6 +233,7 @@ void Renderer::DrawPointLight(Light& light, std::vector<Entity>& entities) {
 	for ( int i = 0; i < 6; i++ ) {
 		staticCubeMapShadowShader->SetMat4( "shadowMatrices[" + std::to_string( i ) + "]", shadowTransforms[i] );
 	}
+
 	for ( int i = 0; i < entities[0].model->nodes.size(); i++ ) {
 		glm::mat4 matrix = entities[0].model->nodes[i].t.Matrix();
 
