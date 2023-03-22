@@ -84,15 +84,15 @@ void main(){
 	//	3. spotLights
 
 	//Directional Light
-	result += CalcDirectional( normal,specular );
+	//result += CalcDirectional( normal,specular );
 
 	//Point Lights
 	for ( int i =0 ; i < numPointLights; i++ )
 		result += CalcPointLights(pointLights[i], normal, specular );
 
 	//Spot Lights
-	for ( int i =0; i < numSpotLights; i++ )
-		result += CalcSpotLights(spotLights[i], normal, specular, i );
+	//for ( int i =0; i < numSpotLights; i++ )
+	//	result += CalcSpotLights(spotLights[i], normal, specular, i );
 
 	result *= color;
 

@@ -135,8 +135,8 @@ void Renderer::BeginFrame() {
 #include "Input.h"
 void renderQuad();
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
-	DrawPointLight( lights[1], entities );
-	DrawDirectionalLight( lights[0], entities );
+	DrawPointLight( lights[0], entities );
+	DrawDirectionalLight( lights[1], entities );
 	
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	glViewport( 0, 0, 1280, 720 );
@@ -161,7 +161,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	DrawModelR( staticShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode],glm::mat4(1.0) );
 }
 
-void DrawDirectionalLight( Light& light, std::vector<Entity>& entities ) {
+void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities ) {
 
 }
 
@@ -236,8 +236,7 @@ void Renderer::DrawModelR( Shader* shader, Model* model, Node* node, glm::mat4 p
 	if ( node->isJoint ) {
 		shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]", jointSpace );
 	}
-
-	//TODO ADD THE ENTITY TRANSLATION TOO! (probably just make it parent's TRS)
+	
 	for ( int i = 0; i < node->meshIndices.size(); i++ ) {
 		Mesh* mesh = &model->meshes[node->meshIndices[i]];//node->meshes[i];
 		mesh->BindVAO();
@@ -336,6 +335,7 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 		shader->SetInt( "numSpotLights", numSpotLights );
 	}
 }
+
 
 unsigned int quadVAO = 0;
 unsigned int quadVBO;
