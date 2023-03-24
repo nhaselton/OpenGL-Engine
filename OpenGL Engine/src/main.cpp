@@ -29,9 +29,9 @@
         a) directional ( Done )
         b) point ( Done )
         c) spot (Fix)
+    11) Basic Shadow Atlas
     9) different sized shadow casters
     10) Multiple Shader casters
-    11) Basic Shadow Atlas
     11.5) Depth prepass?
     12) Shadow Types Dynamic
         a) directional
@@ -40,7 +40,7 @@
    13) Animated shadow casted Imp inside of sponza 
 */
 
-int main( void ) {
+int main( void ) {    
     Common common;
     common.Init();
     common.Frame();

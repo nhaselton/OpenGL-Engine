@@ -64,7 +64,7 @@ void Common::Init() {
 	pointLight.linear = 0.022;
 	pointLight.pos = glm::vec3( 1.4, 2, -.1f );
 	pointLight.quadratic = 0.019;
-	pointLight.farPlane = 15.0f;
+	pointLight.farPlane = 25.0f;
 	lights.push_back( pointLight );
 	
 	Light directional {};
@@ -87,6 +87,9 @@ void Common::Init() {
 	spot.quadratic = 0.019;	
 	//lights.push_back( spot );
 
+	//direction.z = sin( transform.Rotation().y ) * cos( transform.Rotation().x );
+	
+	camera.transform.SetRotation(glm::vec3( 0, 1, 0 ));
 }
 
 void Common::Frame() {
@@ -123,19 +126,19 @@ void Common::UpdateInput() {
 	}
 
 	if ( Input::keys[GLFW_KEY_LEFT] ) {
-		camera.transform.Rotate(glm::vec3(0, -.001f,0.0f));
+		camera.transform.Rotate(glm::vec3(0, -.005f,0.0f));
 	}
 
 	if ( Input::keys[GLFW_KEY_RIGHT] ) {
-		camera.transform.Rotate( glm::vec3( 0, .001f, 0.0f ) );
+		camera.transform.Rotate( glm::vec3( 0, .005f, 0.0f ) );
 	}
 
 	if ( Input::keys[GLFW_KEY_DOWN] ) {
-		camera.transform.Rotate( glm::vec3(  -.001f, 0, 0.0f ) );
+		camera.transform.Rotate( glm::vec3(  -.005f, 0, 0.0f ) );
 	}
 
 	if ( Input::keys[GLFW_KEY_UP] ) {
-		camera.transform.Rotate( glm::vec3(  .001f, 0, 0.0f ) );
+		camera.transform.Rotate( glm::vec3(  .005f, 0, 0.0f ) );
 	}
 
 

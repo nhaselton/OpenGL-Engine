@@ -4,6 +4,7 @@ layout (location = 1) in vec2 aTexCoords;
 
 out vec2 TexCoords;
 
+out vec4 offsetUV;
 void main()
 {
     TexCoords = aTexCoords;

@@ -27,4 +27,7 @@ struct Light {
 	//shadow matrix
 	bool hasShadow;
 	glm::mat4 lightSpaceMatrix;
+
+	//shadow atlas
+	glm::vec4 shadowUVs;//0,0
 };

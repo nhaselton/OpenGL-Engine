@@ -18,6 +18,7 @@ private:
 	class Shader*	staticShader;
 	class Shader*	dynamicShader;
 	class Shader*	lightShader;
+	class Shader*	staticShadowCubeMapAtlasShader;
 	class Shader*	staticShadowShader;
 	class Shader*	staticCubeMapShadowShader;
 	class Shader*	debugDepthQuadShader;

@@ -38,7 +38,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticCubeMapShadowShader = new Shader( "res/shaders/staticCubeMapShadowShader/StaticCubeMapShadowShader.vs","res/shaders/staticCubeMapShadowShader/StaticCubeMapShadowShader.fs" , "res/shaders/staticCubeMapShadowShader/StaticCubeMapShadowShader.gs", 1, 1 );
 	lightShader = new Shader( "res/shaders/lightShader" );
 	debugDepthQuadShader = new Shader( "res/shaders/depthShader" );
-
+	staticShadowCubeMapAtlasShader = new Shader( "res/shaders/CubeDepthAtlasShader" );
 	//shader = new Shader( "res/shaders/staticLitShader" );
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
@@ -57,6 +57,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticShader->SetInt( "specularMap", 2 );
 	staticShader->SetInt( "shadowMap", 4 );
 	staticShader->SetInt( "cubeMap", 5 );
+	staticShader->SetInt( "shadowAtlas", 15 );
 
 }
 
@@ -65,7 +66,7 @@ void Renderer::CreateShadowAtlas() {
 
 	glGenTextures( 1, &shadowAtlasImage );
 	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 8096, 8096, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 8192, 8192, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
@@ -77,6 +78,9 @@ void Renderer::CreateShadowAtlas() {
 	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowAtlasImage, 0 );
 	glDrawBuffer( GL_NONE );
 	glReadBuffer( GL_NONE );
+
+	glActiveTexture( GL_TEXTURE15 );
+	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
 
 	if ( glCheckFramebufferStatus( GL_FRAMEBUFFER ) != GL_FRAMEBUFFER_COMPLETE )
 		std::cout << "Shadow atlas frame buffer not complete";
@@ -160,21 +164,26 @@ void Renderer::BeginFrame() {
 
 #include "Input.h"
 void renderQuad();
+
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
-	DrawPointLight( lights[0], entities );
+	//Bind shadowatlas here, no need to bind it in individual draws probably
+	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
+	glClear( GL_DEPTH_BUFFER_BIT );
 	DrawDirectionalLight( lights[1], entities );
+	DrawPointLight( lights[0], entities );
 	
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	glViewport( 0, 0, 1280, 720 );
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
 	glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
 	
+	glActiveTexture( GL_TEXTURE15 );
+	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage);
+	
 	if ( showShadowAtlas ) {
-		glActiveTexture( GL_TEXTURE15 );
-		glBindTexture( GL_TEXTURE_2D, shadowAtlasImage);
 		debugDepthQuadShader->Use();
 		debugDepthQuadShader->SetFloat( "near_plane", 1 );
-		debugDepthQuadShader->SetInt( "depthMap", 16 );
+		debugDepthQuadShader->SetInt( "depthMap", 15 );
 		debugDepthQuadShader->SetFloat( "far_plane", 25 );
 		renderQuad();
 		return;
@@ -196,62 +205,130 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	DrawModelR( staticShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode],glm::mat4(1.0) );
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
-		lights[1].pos = camera->transform.Position();
-		lights[1].direction = camera->GetForward();
+		lights[0].pos = camera->transform.Position();
+		lights[0].direction = camera->GetForward();
 	}
 }
 
 void Renderer::DrawPointLight(Light& light, std::vector<Entity>& entities) {
-	//Shadowpass
-	glViewport( 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT );
-	glBindFramebuffer( GL_FRAMEBUFFER, cubeShadowMapFBO );
-	glClear( GL_DEPTH_BUFFER_BIT );
+#if 0
+	{
+		//Shadowpass
+		glViewport( 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT );
+		glBindFramebuffer( GL_FRAMEBUFFER, cubeShadowMapFBO );
+		glClear( GL_DEPTH_BUFFER_BIT );
 
+		float aspect = ( float ) SHADOW_WIDTH / ( float ) SHADOW_HEIGHT;
+		float near = 1.0f;
+		glm::mat4 shadowProj = glm::perspective( glm::radians( 90.0f ), aspect, near, light.farPlane );
+		std::vector<glm::mat4> shadowTransforms;
+		glm::vec3 lightPos = light.pos;
+
+		shadowTransforms.push_back( shadowProj *
+			glm::lookAt( lightPos, lightPos + glm::vec3( 1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+		shadowTransforms.push_back( shadowProj *
+			glm::lookAt( lightPos, lightPos + glm::vec3( -1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+		shadowTransforms.push_back( shadowProj *
+			glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 1.0, 0.0 ), glm::vec3( 0.0, 0.0, 1.0 ) ) );
+		shadowTransforms.push_back( shadowProj *
+			glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, -1.0, 0.0 ), glm::vec3( 0.0, 0.0, -1.0 ) ) );
+		shadowTransforms.push_back( shadowProj *
+			glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, 1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+		shadowTransforms.push_back( shadowProj *
+			glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, -1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+
+		staticCubeMapShadowShader->Use();
+		staticCubeMapShadowShader->SetFloat( "far_plane", light.farPlane );
+		staticCubeMapShadowShader->SetVec3( "lightPos", lightPos );
+
+		for ( int i = 0; i < 6; i++ ) {
+			staticCubeMapShadowShader->SetMat4( "shadowMatrices[" + std::to_string( i ) + "]", shadowTransforms[i] );
+		}
+
+		for ( int i = 0; i < entities[0].model->nodes.size(); i++ ) {
+			glm::mat4 matrix = entities[0].model->nodes[i].t.Matrix();
+
+			for ( int n = 0; n < entities[0].model->nodes[i].meshIndices.size(); n++ ) {
+				Mesh& mesh = entities[0].model->meshes[entities[0].model->nodes[i].meshIndices[n]];
+				staticCubeMapShadowShader->SetMat4( "model", matrix );
+
+				mesh.BindVAO();
+				glDrawElements( GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_SHORT, ( void* ) 0 );
+			}
+		}
+	}
+#endif
+	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 	float aspect = ( float ) SHADOW_WIDTH / ( float ) SHADOW_HEIGHT;
 	float near = 1.0f;
 	glm::mat4 shadowProj = glm::perspective( glm::radians( 90.0f ), aspect, near, light.farPlane );
 	std::vector<glm::mat4> shadowTransforms;
 	glm::vec3 lightPos = light.pos;
+
+	shadowTransforms.push_back( shadowProj * glm::lookAt( lightPos, lightPos + glm::vec3( 1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+	shadowTransforms.push_back( shadowProj * glm::lookAt( lightPos, lightPos + glm::vec3( -1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+	shadowTransforms.push_back( shadowProj * glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 1.0, 0.0 ), glm::vec3( 0.0, 0.0, 1.0 ) ) );
+	shadowTransforms.push_back( shadowProj * glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, -1.0, 0.0 ), glm::vec3( 0.0, 0.0, -1.0 ) ) );
+	shadowTransforms.push_back( shadowProj * glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, 1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+	shadowTransforms.push_back( shadowProj * glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, -1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
+
+
+
+	/*
+		+Y
+	 -X +Z +X -Z
+	    -Y
+	*/
+
+	float size = SHADOW_WIDTH;//(float ) 1024.0 / 8192.0;
+	int xLoc = 1; 
+	int yLoc = 1;
+	float scaledSize = 1024.0 / 8192.0;
+	light.shadowUVs = glm::vec4( xLoc * scaledSize, yLoc * scaledSize, ( xLoc + 1 ) * scaledSize, ( yLoc + 1 ) * scaledSize );
+
+	staticShadowCubeMapAtlasShader->Use();
+	staticShadowCubeMapAtlasShader->SetFloat( "far_plane", light.farPlane );
+	staticShadowCubeMapAtlasShader->SetVec3( "lightPos", light.pos );
 	
-	shadowTransforms.push_back( shadowProj *
-		glm::lookAt( lightPos, lightPos + glm::vec3( 1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
-	shadowTransforms.push_back( shadowProj *
-		glm::lookAt( lightPos, lightPos + glm::vec3( -1.0, 0.0, 0.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
-	shadowTransforms.push_back( shadowProj *
-		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 1.0, 0.0 ), glm::vec3( 0.0, 0.0, 1.0 ) ) );
-	shadowTransforms.push_back( shadowProj *
-		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, -1.0, 0.0 ), glm::vec3( 0.0, 0.0, -1.0 ) ) );
-	shadowTransforms.push_back( shadowProj *
-		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, 1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
-	shadowTransforms.push_back( shadowProj *
-		glm::lookAt( lightPos, lightPos + glm::vec3( 0.0, 0.0, -1.0 ), glm::vec3( 0.0, -1.0, 0.0 ) ) );
-
-	staticCubeMapShadowShader->Use();
-	staticCubeMapShadowShader->SetFloat( "far_plane", light.farPlane );
-	staticCubeMapShadowShader->SetVec3( "lightPos", lightPos );
-
-	for ( int i = 0; i < 6; i++ ) {
-		staticCubeMapShadowShader->SetMat4( "shadowMatrices[" + std::to_string( i ) + "]", shadowTransforms[i] );
-	}
-
-	for ( int i = 0; i < entities[0].model->nodes.size(); i++ ) {
-		glm::mat4 matrix = entities[0].model->nodes[i].t.Matrix();
-
-		for ( int n = 0; n < entities[0].model->nodes[i].meshIndices.size(); n++ ) {
-			Mesh& mesh = entities[0].model->meshes[entities[0].model->nodes[i].meshIndices[n]];
-			staticCubeMapShadowShader->SetMat4( "model", matrix );
-
-			mesh.BindVAO();
-			glDrawElements( GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_SHORT, ( void* ) 0 );
-		}
-	}
+	//0) +x
+	//1) -x
+	//2) +y
+	//3) -y
+	//4) +z
+	//5) -z
+	// 
+	//Center
+	glViewport( xLoc * size, yLoc * size, size, size );
+	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[4] );
+	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
+	//Top
+	glViewport( (xLoc + 0) * size, (yLoc - 1) * size, size, size );
+	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[2] );
+	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
+	//Bottom
+	glViewport( ( xLoc + 0 ) * size, ( yLoc + 1 ) * size, size, size );
+	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[3] );
+	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
+	//Left
+	glViewport( ( xLoc - 1 ) * size, ( yLoc + 0 ) * size, size, size );
+	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[1] );
+	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
+	//Right 1
+	glViewport( ( xLoc + 1 ) * size, ( yLoc + 0 ) * size, size, size );
+	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[0] );
+	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
+	//Right 2
+	glViewport( ( xLoc + 2 ) * size, ( yLoc + 0 ) * size, size, size );
+	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[5] );
+	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
 }
 
 void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities ) {
-	glViewport( 0, 0, SHADOW_WIDTH, SHADOW_HEIGHT );
-	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
-	glClear( GL_DEPTH_BUFFER_BIT );
-
+	//TODO find place to put texture in shadow atlas
+	int texX = 0;
+	int texY = 0;
+	glViewport( texX*SHADOW_WIDTH, texY*SHADOW_HEIGHT, SHADOW_WIDTH, SHADOW_HEIGHT );
+	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 
 	float near_plane = 1.0f, far_plane = 25;
 	glm::mat4 lightProjection = glm::ortho( -15.0f, 15.0f, -15.0f, 15.0f, near_plane, far_plane );
@@ -262,11 +339,34 @@ void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities
 	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
 	light.lightSpaceMatrix = lightSpaceMatrix;
 
+	float scaledSize = float ( SHADOW_WIDTH ) / 8192.0;
+	light.shadowUVs = glm::vec4( texX * scaledSize, texY * scaledSize,	(texX+1) * scaledSize, (texY+1) * scaledSize);
+	
 	DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
-
-
 	glActiveTexture( GL_TEXTURE4 );
 	glBindTexture( GL_TEXTURE_2D, depthMapImage );
+	//OLD way
+	/*
+	{
+		glViewport( 0, 0 , SHADOW_WIDTH, SHADOW_HEIGHT );
+		glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
+		glClear( GL_DEPTH_BUFFER_BIT );
+
+		float near_plane = 1.0f, far_plane = 25;
+		glm::mat4 lightProjection = glm::ortho( -15.0f, 15.0f, -15.0f, 15.0f, near_plane, far_plane );
+		glm::mat4 view = glm::lookAt( light.pos, light.pos + light.direction, glm::vec3( 0, 1, 0 ) );
+
+		glm::mat4 lightSpaceMatrix = lightProjection * view;
+		staticShadowShader->Use();
+		staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
+		light.lightSpaceMatrix = lightSpaceMatrix;
+
+		DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], glm::mat4( 1.0 ) );
+
+		glActiveTexture( GL_TEXTURE4 );
+		glBindTexture( GL_TEXTURE_2D, depthMapImage );
+	}
+	*/
 }
 
 
@@ -362,8 +462,8 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 				shader->SetVec3( "directionalLight.color", lights[i].color );
 				shader->SetVec3( "directionalLight.pos", lights[i].pos );
 				shader->SetVec3( "directionalLight.direction", lights[i].direction );
+				shader->SetVec4( "directionalLight.shadowUVs", lights[i].shadowUVs );
 				shader->SetMat4( "directionalLightSpaceMatrix", lights[i].lightSpaceMatrix );
-
 			}
 
 			else if ( lights[i].lType == LIGHT_POINT ) {
@@ -376,7 +476,7 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 				shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
 				shader->SetFloat( prefix + "farPlane", lights[i].farPlane);
 				shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
-
+				shader->SetVec4( prefix + "shadowUVs", lights[i].shadowUVs );
 			}
 
 			else if ( lights[i].lType == LIGHT_SPOT ) {
@@ -388,6 +488,7 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 				shader->SetFloat( prefix + "quadratic", lights[i].quadratic );
 				shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
 				shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
+				shader->SetVec4( prefix + "shadowUVs", lights[i].shadowUVs );
 			}
 
 		}
