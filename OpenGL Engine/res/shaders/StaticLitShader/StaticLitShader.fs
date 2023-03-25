@@ -18,9 +18,7 @@ struct Light {
 uniform sampler2D albedo;
 uniform sampler2D specularMap;
 uniform sampler2D normalMap;
-uniform sampler2D shadowMap;
 uniform sampler2D shadowAtlas;
-uniform samplerCube cubeMap;
 
 
 //Lights
@@ -30,7 +28,7 @@ uniform Light spotLights[32];
 uniform Light directionalLight;
 
 uniform mat4 directionalLightSpaceMatrix;
-uniform mat4[32] spotLightSpaceMatrices;
+uniform mat4 spotLightSpaceMatrices[32];
 
 uniform int numPointLights;
 uniform int numSpotLights;
@@ -55,7 +53,6 @@ vec3 CalcPointLights(Light light, vec3 normal ,float specular);
 vec3 CalcSpotLights(Light light, vec3 normal ,float specular,int lightID);
 float CalcShadow(vec4 fragLightSpace, Light light);
 vec3 ShadowOffsetLookUp(sampler2D map, vec4 loc, vec2 offset);
-float CalcCubeShadow(Light light, vec3 fragPos);
 float CalcPointLightShadows(Light light);
 
 
@@ -86,7 +83,7 @@ void main(){
 	//	3. spotLights
 
 	//Directional Light
-	//result += CalcDirectional( normal,specular );
+	result += CalcDirectional( normal,specular );
 
 	//Point Lights
 	for ( int i =0 ; i < numPointLights; i++ )
@@ -97,10 +94,7 @@ void main(){
 		result += CalcSpotLights(spotLights[i], normal, specular, i );
 	result += vec3(.05f);//ambient
 	
-	
 	result *= color;
-
-	//result = vec3(CalcPointLightShadows(pointLights[0]));
 
 	FragColor = vec4(result,1.0);
 }
@@ -214,9 +208,6 @@ float CalcPointLightShadows(Light light){
 	return shadow;
 }
 
-
-
-
 //todo fix
 float CalcShadow(vec4 fragLightSpace, Light light){
 	vec3 projCoords = fragLightSpace.xyz / fragLightSpace.w;
@@ -235,6 +226,7 @@ float CalcShadow(vec4 fragLightSpace, Light light){
 	// get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
 	
+
 	return currentDepth - .05 > closestDepth ? 1 : 0;
 
 
@@ -255,37 +247,6 @@ float CalcShadow(vec4 fragLightSpace, Light light){
 	sampleShadow /= 9.0;
 	
 	return sampleShadow;
-}
-
-
-float CalcCubeShadow(Light light, vec3 fragPos){
-	vec3 fragToLight = vFragPos - light.pos; 
-    float closestDepth = texture(cubeMap, fragToLight).r;
-	closestDepth *= light.farPlane;  
-	float currentDepth = length(fragToLight);  
-	float shadow = currentDepth > closestDepth ? 1.0 : 0.0;     
-
-	// == Brute Force Shadow Sampler == //
-	//float shadow  = 0.0;
-	float bias    = 0.05; 
-	float samples = 4.0;
-	float offset  = 0.1;
-	for(float x = -offset; x < offset; x += offset / (samples * 0.5))
-	{
-		for(float y = -offset; y < offset; y += offset / (samples * 0.5))
-		{
-			for(float z = -offset; z < offset; z += offset / (samples * 0.5))
-			{
-				float closestDepth = texture(cubeMap, fragToLight + vec3(x, y, z)).r; 
-				closestDepth *= light.farPlane;   // undo mapping [0;1]
-				if(currentDepth - bias > closestDepth)
-					shadow += 1.0;
-			}
-		}
-	}
-	shadow /= (samples * samples * samples);
-
-	return shadow;
 }
 
 vec3 CalcDirectional(vec3 normal ,float specular){
@@ -355,10 +316,7 @@ vec3 CalcSpotLights(Light light, vec3 normal ,float specular, int lightID) {
 	
 	// -- Shadow -- //
 	vec4 lightFragPos = spotLightSpaceMatrices[lightID] * vec4(vFragPos, 1.0);
-
 	float shadow = CalcShadow(lightFragPos , light);
-
-
 	
 	result = (1.0-shadow) * (diffuse + specular) * light.color; 
 	return result;

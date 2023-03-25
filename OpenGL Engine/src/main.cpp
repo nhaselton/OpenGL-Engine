@@ -28,17 +28,20 @@
     8) Shadow types Static
         a) directional ( Done )
         b) point ( Done )
-        c) spot (Fix)
+        c) spot ( Fix )
     11) Basic Shadow Atlas
     9) different sized shadow casters
     10) Multiple Shader casters
-    11.5) Depth prepass?
+    11) Depth prepas
     12) Shadow Types Dynamic
         a) directional
         b) point
         c) spot
    13) Animated shadow casted Imp inside of sponza 
-*/
+   14) Uber Shaders
+
+    Light Culling
+   */
 
 int main( void ) {    
     Common common;

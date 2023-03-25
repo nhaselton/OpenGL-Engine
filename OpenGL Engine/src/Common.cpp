@@ -79,13 +79,14 @@ void Common::Init() {
 	Light spot;
 	spot.lType = LIGHT_SPOT;	
 	spot.color = glm::vec3( 1, 1, 1 );
-	spot.cutoff = glm::cos( glm::radians( 12.0f ) );
+	spot.cutoff = glm::cos( glm::radians( 30.0f ) );
 	spot.linear = 0.022;
-	spot.outerCutoff = glm::cos( glm::radians( 17.5f ) );
+	spot.outerCutoff = glm::cos( glm::radians( 45.f ) );
 	spot.pos = glm::vec3( -1.4, 1, 0.0);
 	spot.direction = glm::vec3(11,0.1,-0.8);
 	spot.quadratic = 0.019;	
-	//lights.push_back( spot );
+	spot.farPlane = 25.0f;
+	lights.push_back( spot );
 
 	//direction.z = sin( transform.Rotation().y ) * cos( transform.Rotation().x );
 	
