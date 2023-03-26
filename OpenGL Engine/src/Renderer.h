@@ -11,7 +11,15 @@ enum shadowMapType {
 	SHADOW_MAP_CUBE
 };
 
-#define VIEWPORT_INDEX_SIZE 512 //how much to multiply the viewport by for shadow atlas
+#define SHADOW_ATLAS_WIDTH 8192
+#define SHADOW_ATLAS_HEIGHT 8192
+#define SHADOW_ATLAS_TILE_SIZE 512 //tile size
+
+
+#define bitset(byte,nbit)   ((byte) |=  (1<<(nbit)))
+#define bitclear(byte,nbit) ((byte) &= ~(1<<(nbit)))
+#define bitflip(byte,nbit)  ((byte) ^=  (1<<(nbit)))
+#define bitcheck(byte,nbit) ((byte) &   (1<<(nbit)))
 
 class Renderer {
 public:
@@ -25,6 +33,7 @@ private:
 	class Shader*	staticShader;
 	class Shader*	dynamicShader;
 	class Shader*	staticShadowCubeMapAtlasShader;
+	class Shader*	staticDepthPrepassShader;
 	class Shader*	staticShadowShader;
 	class Shader*	debugDepthQuadShader;
 
@@ -45,6 +54,9 @@ private:
 	unsigned int	shadowAtlasFBO;
 	unsigned int	shadowAtlasImage;
 
+	//debug quad
+	unsigned int quadVAO = 0;
+	unsigned int quadVBO;
 
 	bool			showNormalMap;
 	bool			showSpecularMap;
@@ -60,11 +72,10 @@ private:
 	void			DrawDirectionalLight( Light& light , std::vector<Entity>& entities );
 	void			InitLights( std::vector<Light> lights );
 	void			BindTextures( Mesh* mesh );
-	void			CreateDepthMap();
-	void			CreateCubeMap();
 	void			renderQuad();
 	void			CreateShadowAtlas();
 	void			DebugPrintShadowAtlas();
 	//returns UV coords of texture atlas slot
 	AtlasLocation		FindFreeSpaceInShadowAltas( shadowMapType type, int shadowWidth, int shadowHeight );
+
 };

@@ -29,18 +29,24 @@
         a) directional ( Done )
         b) point ( Done )
         c) spot ( Done )
-    11) Basic Shadow Atlas
-    9) different sized shadow casters
-    10) Multiple Shader casters
-    11) Depth prepas
+    11) Basic Shadow Atlas (Done)
+    9) different sized shadow casters ( Done )
+    10) Multiple Shader casters ( Done )
+    10.5) Refactor & Clean ( Done )
+    11) Depth prepas ( Done )
     12) Shadow Types Dynamic
         a) directional
         b) point
         c) spot
-   13) Animated shadow casted Imp inside of sponza 
-   14) Uber Shaders
+   13) lights only update when changed
+   14) shadow atlas only updates on change 
+   15) Animated shadow casted Imp inside of sponza 
+   16) Uber Shaders
 
-    Light Culling
+   Eventually
+    1) Log draw calls
+    2) Frustum Culling
+    3) Light "Frustum" Culling
    */
 
 int main( void ) {    

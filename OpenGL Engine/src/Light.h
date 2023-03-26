@@ -13,27 +13,27 @@ enum LightType {
 };
 
 struct Light {
-	LightType lType;
+	LightType	lType;
 	//All
-	glm::vec3 color;
+	glm::vec3	color;
 	//Directional
-	glm::vec3 direction;
+	glm::vec3	direction;
 	//point
-	glm::vec3 pos;
-	float linear;
-	float quadratic;
+	glm::vec3	pos;
+	float		linear;
+	float		quadratic;
 	//cutoff
-	float cutoff;//12.5f
-	float outerCutoff;//17.5f
+	float		cutoff;//12.5f
+	float		outerCutoff;//17.5f
 
 	//Point light shadows
-	float farPlane;
+	float		farPlane;
 
 	//shadow matrix
-	bool hasShadow;
-	glm::mat4 lightSpaceMatrix;
+	bool		hasShadow;
+	glm::mat4	lightSpaceMatrix;
 
 	//shadow atlas
-	//glm::vec4 shadowUVs;//0,0
-	AtlasLocation shadowAtlasLocation;
+	glm::vec2		shadowMapSize;
+	AtlasLocation	shadowAtlasLocation;
 };

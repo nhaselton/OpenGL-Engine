@@ -14,21 +14,16 @@
 #include "imgui/imgui_impl_opengl3.h"
 
 int index;
-float bias;
-
 
 Renderer::Renderer() {
 	index = 0;
-	bias = 0;
 	showNormalMap = true;
 	showSpecularMap = true;
 }
 
-const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+//const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 
 void Renderer::Init( Window* window, Camera* camera ) {
-	//CreateDepthMap();
-	//CreateCubeMap();
 	CreateShadowAtlas();
 
 	this->window = window;
@@ -37,7 +32,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticShadowShader = new Shader( "res/shaders/staticshadowshader" );
 	debugDepthQuadShader = new Shader( "res/shaders/depthShader" );
 	staticShadowCubeMapAtlasShader = new Shader( "res/shaders/CubeDepthAtlasShader" );
-
+	staticDepthPrepassShader = new Shader( "res/shaders/staticdepthpass" );
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
 	glEnable( GL_DEPTH_TEST );
@@ -56,13 +51,25 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticShader->SetInt( "shadowMap", 4 );
 	staticShader->SetInt( "cubeMap", 5 );
 	staticShader->SetInt( "shadowAtlas", 15 );
+	staticShader->SetMat4( "projection", projection );
 
-	int numSquares = ( 8192 * 8192 ) / ( 512 * 512 );//this will always divide equally into int
+	dynamicShader->Use();
+	dynamicShader->SetInt( "albedo", 0 );
+	dynamicShader->SetInt( "normalMap", 1 );
+	dynamicShader->SetInt( "specularMap", 2 );
+	dynamicShader->SetInt( "shadowMap", 4 );
+	dynamicShader->SetInt( "cubeMap", 5 );
+	dynamicShader->SetInt( "shadowAtlas", 15 );
+	dynamicShader->SetMat4( "projection", projection );
+
+	staticDepthPrepassShader->Use();
+	staticDepthPrepassShader->SetMat4( "projection", projection );
+
+	int numSquares = ( SHADOW_ATLAS_WIDTH * SHADOW_ATLAS_HEIGHT) / ( SHADOW_ATLAS_TILE_SIZE * SHADOW_ATLAS_TILE_SIZE );//this will always divide equally into int
 	int numInts = numSquares / 32;
 
 	shadowAtlasContents = ( unsigned int* ) malloc( numInts * sizeof( int ) );
 	memset( shadowAtlasContents, 0, numInts * sizeof( int ) );
-	//FindFreeSpaceInShadowAltas( SHADOW_MAP_OMNIDIRECTIONAL, 1024, 1024 );
 }
 
 
@@ -72,7 +79,7 @@ void Renderer::CreateShadowAtlas() {
 
 	glGenTextures( 1, &shadowAtlasImage );
 	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 8192, 8192, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_ATLAS_WIDTH, SHADOW_ATLAS_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
@@ -95,53 +102,9 @@ void Renderer::CreateShadowAtlas() {
 		std::cout << "Shadow atlas frame buffer not complete";
 
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-
-
 	//bind image here, it never gets unbound because 15 is reserved for it
 	glActiveTexture( GL_TEXTURE15 );
 	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
-
-
-}
-void Renderer::CreateDepthMap() {
-	glGenFramebuffers( 1, &shadowMapFBO );
-
-	glGenTextures( 1, &depthMapImage );
-	glBindTexture( GL_TEXTURE_2D, depthMapImage );
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER );
-	float borderColor[] = { 0, 0, 0, 1.0f };
-	glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
-
-	glBindFramebuffer( GL_FRAMEBUFFER, shadowMapFBO );
-	glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapImage, 0 );
-	glDrawBuffer( GL_NONE );
-	glReadBuffer( GL_NONE );
-
-	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-}
-void Renderer::CreateCubeMap() {
-	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-	glGenFramebuffers( 1, &cubeShadowMapFBO );
-	// create depth cubemap texture
-	glGenTextures( 1, &depthCubeMap );
-	glBindTexture( GL_TEXTURE_CUBE_MAP, depthCubeMap );
-	for ( unsigned int i = 0; i < 6; ++i )
-		glTexImage2D( GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-	glTexParameteri( GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE );
-	// attach depth texture as FBO's depth buffer
-	glBindFramebuffer( GL_FRAMEBUFFER, cubeShadowMapFBO );
-	glFramebufferTexture( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubeMap, 0 );
-	glDrawBuffer( GL_NONE );
-	glReadBuffer( GL_NONE );
-	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 }
 
 void Renderer::BeginFrame() {
@@ -167,10 +130,6 @@ void Renderer::BeginFrame() {
 
 	ImGui::Begin( "Frame" );
 	ImGui::SliderInt( "frame", &index, 0, 31 );
-	ImGui::End();
-
-	ImGui::Begin( "Shadow Bias" );
-	ImGui::SliderFloat( "Shadow Bias", &bias, 0, .1f );
 	ImGui::End();
 }
 
@@ -202,34 +161,39 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 		return;
 	}
 
+	// == DEPTH PREPASS == // 
+	staticDepthPrepassShader->Use();
+	staticDepthPrepassShader->SetMat4( "view", camera->GetView() );
+	DrawModelR( staticDepthPrepassShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], true, glm::mat4( 1.0 ) );
+	glDepthFunc( GL_LEQUAL );
+
 	//TODO init singular light function
 	InitLights( lights );
 	staticShader->Use();
 	staticShader->SetMat4( "view", camera->GetView() );
-	staticShader->SetMat4( "projection", projection );
 	staticShader->SetBool( "showNormalMap", showNormalMap );
 	staticShader->SetBool( "showSpecularMap", showSpecularMap );
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 
+
 	DrawModelR( staticShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], true, glm::mat4( 1.0 ) );
+	glDepthFunc( GL_LESS );
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
 		lights[0].pos = camera->transform.Position();
 		lights[0].direction = camera->GetForward();
 	}
-
-
 }
 
 //wonder if i could figure out how to do this with 1 viewport, find start pos, then i could get bounds and maybe draw correctly
 void Renderer::DrawPointLight( Light& light, std::vector<Entity>& entities ) {
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 
-	if ( light.shadowAtlasLocation.index.x == -1 ) {
-		light.shadowAtlasLocation = FindFreeSpaceInShadowAltas( SHADOW_MAP_CUBE, SHADOW_WIDTH, SHADOW_HEIGHT );
+	if ( light.shadowAtlasLocation.index.x == -1 && light.hasShadow) {
+		light.shadowAtlasLocation = FindFreeSpaceInShadowAltas( SHADOW_MAP_CUBE, light.shadowMapSize.x, light.shadowMapSize.y );
 	}
 
-	float aspect = ( float ) SHADOW_WIDTH / ( float ) SHADOW_HEIGHT;
+	float aspect = ( float ) light.shadowMapSize.x / ( float ) light.shadowMapSize.y;
 	float near = 1.0f;
 	glm::mat4 shadowProj = glm::perspective( glm::radians( 90.0f ), aspect, near, light.farPlane );
 	std::vector<glm::mat4> shadowTransforms;
@@ -248,40 +212,37 @@ void Renderer::DrawPointLight( Light& light, std::vector<Entity>& entities ) {
 		-Y
 	*/
 
-	float size = SHADOW_WIDTH;
+	float size = light.shadowMapSize.x;
 	int xLoc = light.shadowAtlasLocation.index.x;
 	int yLoc = light.shadowAtlasLocation.index.y;
-	
-	//float scaledSize = 1024.0 / 8192.0;
-	//light.shadowAtlasLocation.texCoords = glm::vec4( xLoc * scaledSize, yLoc * scaledSize, ( xLoc + 1 ) * scaledSize, ( yLoc + 1 ) * scaledSize );
 
 	staticShadowCubeMapAtlasShader->Use();
 	staticShadowCubeMapAtlasShader->SetFloat( "far_plane", light.farPlane );
 	staticShadowCubeMapAtlasShader->SetVec3( "lightPos", light.pos );
-	
-	int tileSize = SHADOW_WIDTH / 512;
 
-	glViewport( xLoc * VIEWPORT_INDEX_SIZE, yLoc * VIEWPORT_INDEX_SIZE, size, size );
+	int tileSize = light.shadowMapSize.x / SHADOW_ATLAS_TILE_SIZE;
+
+	glViewport( xLoc * SHADOW_ATLAS_TILE_SIZE, yLoc * SHADOW_ATLAS_TILE_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[4] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Top
-	glViewport( ( xLoc + 0* tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc - 1 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
+	glViewport( ( xLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc - 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[2] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Bottom
-	glViewport( ( xLoc + 0* tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 1 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
+	glViewport( ( xLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[3] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Left
-	glViewport( ( xLoc - 1 * tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 0 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
+	glViewport( ( xLoc - 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[1] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Right 1
-	glViewport( ( xLoc + 1 * tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 0 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
+	glViewport( ( xLoc + 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[0] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Right 2
-	glViewport( ( xLoc + 2 * tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 0 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
+	glViewport( ( xLoc + 2 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[5] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 }
@@ -289,51 +250,39 @@ void Renderer::DrawPointLight( Light& light, std::vector<Entity>& entities ) {
 void Renderer::DrawSpotLight( Light& light, std::vector<Entity>& entities ) {
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 
-	//TODO find place to put texture in shadow atlas
-	//int texX = 5;
-	//int texY = 5;
-	if ( light.shadowAtlasLocation.index.x == -1 ) {
-		light.shadowAtlasLocation = FindFreeSpaceInShadowAltas( SHADOW_MAP_OMNIDIRECTIONAL, SHADOW_WIDTH, SHADOW_HEIGHT );
+	if ( light.shadowAtlasLocation.index.x == -1 && light.hasShadow ) {
+		light.shadowAtlasLocation = FindFreeSpaceInShadowAltas( SHADOW_MAP_OMNIDIRECTIONAL, light.shadowMapSize.x, light.shadowMapSize.y );
 	}
 
 	int texX = light.shadowAtlasLocation.index.x;
 	int texY = light.shadowAtlasLocation.index.y;
-	glViewport( texX * VIEWPORT_INDEX_SIZE, texY * VIEWPORT_INDEX_SIZE, SHADOW_WIDTH, SHADOW_HEIGHT );
+	glViewport( texX * SHADOW_ATLAS_TILE_SIZE, texY * SHADOW_ATLAS_TILE_SIZE, light.shadowMapSize.x, light.shadowMapSize.y );
 
 	float near_plane = 1.0f, far_plane = light.farPlane;
-	glm::mat4 lightProjection = glm::perspective( glm::radians( 90.0f ), ( float ) SHADOW_WIDTH / ( float ) SHADOW_HEIGHT, near_plane, far_plane );
-	//glm::mat4 lightProjection = glm::ortho( -15.0f, 15.0f, -15.0f, 15.0f, near_plane, far_plane );
-
+	
+	glm::mat4 lightProjection = glm::perspective( glm::radians( 90.0f ), ( float ) light.shadowMapSize.x / ( float ) light.shadowMapSize.y, near_plane, far_plane );
 	glm::mat4 view = glm::lookAt( light.pos, light.pos + light.direction, glm::vec3( 0, 1, 0 ) );
-
 	glm::mat4 lightSpaceMatrix = lightProjection * view;
 
 	staticShadowShader->Use();
 	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
 	light.lightSpaceMatrix = lightSpaceMatrix;
 
-	float scaledSize = float( SHADOW_WIDTH ) / 8192.0;
-	//light.shadowAtlasLocation.texCoords = glm::vec4( texX * scaledSize, texY * scaledSize, ( texX + 1 ) * scaledSize, ( texY + 1 ) * scaledSize );
 	DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 }
 
-#define bitset(byte,nbit)   ((byte) |=  (1<<(nbit)))
-#define bitclear(byte,nbit) ((byte) &= ~(1<<(nbit)))
-#define bitflip(byte,nbit)  ((byte) ^=  (1<<(nbit)))
-#define bitcheck(byte,nbit) ((byte) &   (1<<(nbit)))
 
-bool checkBit( unsigned int* data, int bit ) {
+//Keep these as unclassed functions for lambda
+static bool checkBit( unsigned int* data, int bit ) {
 	int intIndx = bit / 32; //get which int its in
 	int bitIndx = bit % 32; //get offset
 	return bitcheck( data[intIndx], bitIndx );
 }
 
-void setBit( unsigned int* data, int bit, int val ) {
+static void setBit( unsigned int* data, int bit, int val ) {
 	int intIndx = bit / 32; //get which int its in
 	int bitIndx = bit % 32; //get offset
-
-	//std::cout << intIndx << ", " << bitIndx << std::endl;
-	//return bitcheck( data[intIndx], bitIndx );
+	
 	if ( val == 0 )
 		bitclear( data[intIndx], bitIndx );
 	else if ( val == 1 )
@@ -344,9 +293,8 @@ void setBit( unsigned int* data, int bit, int val ) {
 
 
 AtlasLocation Renderer::FindFreeSpaceInShadowAltas( shadowMapType type, int shadowWidth, int shadowHeight ) {
-	//only do omnidirectional at first
-	static int totalNumTilesX = 8192 / 512;
-	static int totalNumTilesY = 8192 / 512;
+	static int totalNumTilesX = SHADOW_ATLAS_WIDTH  / SHADOW_ATLAS_TILE_SIZE;
+	static int totalNumTilesY = SHADOW_ATLAS_HEIGHT / SHADOW_ATLAS_TILE_SIZE;
 
 	int tilesNeededX = shadowWidth / 512;
 	int tilesNeededY = shadowHeight / 512;
@@ -356,111 +304,74 @@ AtlasLocation Renderer::FindFreeSpaceInShadowAltas( shadowMapType type, int shad
 			//check numTilesX -1 to the right
 			//check numTilesY - 1 down
 				//if all are free then set them 
-
-	if ( type == SHADOW_MAP_OMNIDIRECTIONAL ) {
-
-		bool done = false;
-		unsigned int locations[100];
-		int numLocations = 0;
-
-		for ( int y = 0; y < totalNumTilesY - ( tilesNeededX - 1 ); y++ )
-			for ( int x = 0; x < totalNumTilesX - ( tilesNeededY - 1 ); x++ ) {
-				if ( done ) break;
-				int loc = ( y * totalNumTilesX + x );
-				if ( checkBit( shadowAtlasContents, loc ) == 0 ) {
-					numLocations = 0;
-					bool isSpace = true;
-					for ( int j = 0; j < tilesNeededY; j++ )
-						for ( int n = 0; n < tilesNeededX; n++ ) {
-							int plusX = n;
-							int plusY = totalNumTilesY * j;
-							int newLoc = loc + plusY + plusX;
-							locations[numLocations++] = newLoc;
-							if ( checkBit( shadowAtlasContents, newLoc ) == 1 ) {
-								isSpace = false;
-							}
-						}
-					if ( isSpace ) {
-						done = true;
-						for ( int i = 0; i < numLocations; i++ )
-							setBit( shadowAtlasContents, locations[i], 1 );
-
-						//Get UV coords
-						//16x16
-						float minX = ( float ) x / 16.0f;
-						float minY = ( float ) y / 16.0f;
-						float maxX = ( float ) ( x + tilesNeededX ) / 16.0f;
-						float maxY = ( float ) ( y + tilesNeededY ) / 16.0f;
-						AtlasLocation loc;
-						loc.texCoords = glm::vec4( minX, minY, maxX, maxY );
-						loc.index = glm::ivec2( x, y );
-						return loc;
-					}
+	auto checkSquare = [] ( unsigned int* shadowAtlasContents, int boardWidth, int x, int y, int w, int h, unsigned int locations[100], int* numInts ) {
+		for ( int j = 0; j < h; j++ )
+			for ( int n = 0; n < w; n++ ) {
+				int loc = y * boardWidth + x;//TODO REMOVE CONSTNAT
+				int plusX = n;
+				int plusY = totalNumTilesY * j;
+				int newLoc = loc + plusY + plusX;
+				locations[*numInts] = newLoc;
+				( *numInts )++;
+				if ( checkBit( shadowAtlasContents, newLoc ) == 1 ) {
+					return  false;
 				}
 			}
-	}
+		return true;
+	};
 
-	if ( type == SHADOW_MAP_CUBE ) {
+	bool done = false;
+	unsigned int locations[100];
+	int numLocations = 0;
 
-		bool done = false;
-		unsigned int locations[100];
-		int numLocations = 0;
+	//cube map and omnidirectional start and differnet X & Ys
+	int startX = ( type == SHADOW_MAP_CUBE ) ? tilesNeededX : 0;
+	int endX = ( type == SHADOW_MAP_CUBE ) ? totalNumTilesX - ( tilesNeededX * 2 ) : totalNumTilesX - (tilesNeededX-1);
 
-		auto checkSquare = [] ( unsigned int* shadowAtlasContents, int boardWidth, int x, int y, int w, int h, unsigned int locations[100], int* numInts ) {
-			for ( int j = 0; j < h; j++ )
-				for ( int n = 0; n < w; n++ ) {
-					int loc = y * boardWidth + x;//TODO REMOVE CONSTNAT
-					int plusX = n;
-					int plusY = totalNumTilesY * j;
-					int newLoc = loc + plusY + plusX;
-					locations[*numInts] = newLoc;
-					(*numInts)++;
-					if ( checkBit( shadowAtlasContents, newLoc ) == 1 ) {
-						return  false;
-					}
-				}
-			return true;
-		};
+	int startY = ( type == SHADOW_MAP_CUBE ) ? tilesNeededY : 0;
+	int endY = ( type == SHADOW_MAP_CUBE ) ? totalNumTilesY - ( tilesNeededX - 1 ) : totalNumTilesY - ( tilesNeededY - 1 );
 
-		for ( int y = tilesNeededX; y < totalNumTilesY - ( tilesNeededX - 1 ); y++ )
-			for ( int x = tilesNeededY; x < totalNumTilesX - ( tilesNeededX * 2 ); x++ ) {
-				if ( done ) break;
-				int loc = ( y * totalNumTilesX + x );
-				if ( checkBit( shadowAtlasContents, loc ) == 0 ) {
-					numLocations = 0;
-					bool isSpace = true;
-
-					isSpace = ( 
+	for ( int y = startY; y < endY ; y++ )
+		for ( int x = startX; x < endX; x++ ) {
+			if ( done ) break;
+			int loc = ( y * totalNumTilesX + x );
+			if ( checkBit( shadowAtlasContents, loc ) == 0 ) {
+				numLocations = 0;
+				bool isSpace = true;
+				if ( type == SHADOW_MAP_CUBE ) {
+					isSpace = (
 						checkSquare( shadowAtlasContents, totalNumTilesX, x, y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
 						checkSquare( shadowAtlasContents, totalNumTilesX, x - tilesNeededX, y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
 						checkSquare( shadowAtlasContents, totalNumTilesX, x + tilesNeededX, y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
-						checkSquare( shadowAtlasContents, totalNumTilesX, x + (tilesNeededX * 2), y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
+						checkSquare( shadowAtlasContents, totalNumTilesX, x + ( tilesNeededX * 2 ), y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
 						checkSquare( shadowAtlasContents, totalNumTilesX, x, y - tilesNeededY, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
 						checkSquare( shadowAtlasContents, totalNumTilesX, x, y + tilesNeededY, tilesNeededX, tilesNeededY, locations, &numLocations )
 						);
+				}
+				else if ( type == SHADOW_MAP_OMNIDIRECTIONAL ) {
+					isSpace = ( checkSquare( shadowAtlasContents, totalNumTilesX, x, y, tilesNeededX, tilesNeededY, locations, &numLocations ) );
+				}
 
 
-					if ( isSpace ) {
-						done = true;
-						for ( int i = 0; i < numLocations; i++ )
-							setBit( shadowAtlasContents, locations[i], 1 );
+				if ( isSpace ) {
+					done = true;
+					for ( int i = 0; i < numLocations; i++ )
+						setBit( shadowAtlasContents, locations[i], 1 );
 
-						//Get UV coords
-						//16x16
-						float minX = ( float ) x / 16.0f;
-						float minY = ( float ) y / 16.0f;
-						float maxX = ( float ) ( x + tilesNeededX ) / 16.0f;
-						float maxY = ( float ) ( y + tilesNeededY ) / 16.0f;
-						AtlasLocation loc;
-						loc.texCoords = glm::vec4( minX, minY, maxX, maxY );
-						loc.index = glm::ivec2( x, y );
-						
- 						return loc;
-					}
+					//Get UV coords
+					//16x16
+					float minX = ( float ) x / 16.0f;
+					float minY = ( float ) y / 16.0f;
+					float maxX = ( float ) ( x + tilesNeededX ) / 16.0f;
+					float maxY = ( float ) ( y + tilesNeededY ) / 16.0f;
+					AtlasLocation loc;
+					loc.texCoords = glm::vec4( minX, minY, maxX, maxY );
+					loc.index = glm::ivec2( x, y );
+
+					return loc;
 				}
 			}
-	}
-
+		}
 
 	std::cout << "COULD NOT FIND A FREE LOCATION, ATLAS LOOKS LIKE" << std::endl;
 	DebugPrintShadowAtlas();
@@ -483,14 +394,14 @@ void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 
 	//Check if it is in atlas, if not add it
-	if ( light.shadowAtlasLocation.index.x == -1 ) {
-		AtlasLocation loc = FindFreeSpaceInShadowAltas( SHADOW_MAP_OMNIDIRECTIONAL, SHADOW_WIDTH, SHADOW_HEIGHT );
+	if ( light.shadowAtlasLocation.index.x == -1 && light.hasShadow ) {
+		AtlasLocation loc = FindFreeSpaceInShadowAltas( SHADOW_MAP_OMNIDIRECTIONAL, light.shadowMapSize.x, light.shadowMapSize.y );
 		light.shadowAtlasLocation = loc;
 	}
 
 	int texX = light.shadowAtlasLocation.index.x;
 	int texY = light.shadowAtlasLocation.index.y;
-	glViewport( texX * VIEWPORT_INDEX_SIZE, texY * VIEWPORT_INDEX_SIZE, SHADOW_WIDTH, SHADOW_HEIGHT );
+	glViewport( texX * SHADOW_ATLAS_TILE_SIZE, texY * SHADOW_ATLAS_TILE_SIZE, light.shadowMapSize.x, light.shadowMapSize.y );
 
 	float near_plane = 1.0f, far_plane = light.farPlane;
 	glm::mat4 lightProjection = glm::ortho( -15.0f, 15.0f, -15.0f, 15.0f, near_plane, far_plane );
@@ -502,9 +413,7 @@ void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities
 	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
 	light.lightSpaceMatrix = lightSpaceMatrix;
 
-	float scaledSize = float( SHADOW_WIDTH ) / 8192.0;
-	//light.shadowUVs = glm::vec4( texX * scaledSize, texY * scaledSize, ( texX + 1 ) * scaledSize, ( texY + 1 ) * scaledSize );
-
+	float scaledSize = float( light.shadowMapSize.x ) / 8192.0;
 	DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 }
 
@@ -624,9 +533,6 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 	}
 }
 
-
-unsigned int quadVAO = 0;
-unsigned int quadVBO;
 void Renderer::renderQuad() {
 	if ( quadVAO == 0 ) {
 		float quadVertices[] = {

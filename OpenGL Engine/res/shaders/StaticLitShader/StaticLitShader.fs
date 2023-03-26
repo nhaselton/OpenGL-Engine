@@ -204,8 +204,23 @@ float CalcPointLightShadows(Light light){
 	closestDepth *= light.farPlane;  
 	float currentDepth = length(fragToLight);  
 	float shadow = currentDepth - .05 > closestDepth ? 1.0 : 0.0;    
-	
-	return shadow;
+		// == Brute Force Shadow Sampler == //
+
+	// == Brute Force Shadow Sampler == //
+	float bias = .05;
+	float sampleShadow = 0.0;
+	//seems to work with texture atlas size not defualt map size, wonder if its suppose to do that
+	vec2 texelSize = vec2(1.0 / 8096);//textureSize(shadowMap, 0);
+
+	for(int x = -1; x <= 1; x++) {
+		for(int y = -1; y <= 1; y++) {
+			float depth = texture(shadowAtlas, vec2(u,v) + vec2(x,y) * texelSize).r; 
+			depth *= light.farPlane;
+			sampleShadow += currentDepth - bias > depth ? 1 : 0;
+		}
+	}
+	sampleShadow /= 9.0;
+	return sampleShadow;
 }
 
 //todo fix
@@ -227,7 +242,7 @@ float CalcShadow(vec4 fragLightSpace, Light light){
     float currentDepth = projCoords.z;
 	
 
-	return currentDepth - .05 > closestDepth ? 1 : 0;
+	//return currentDepth - .05 > closestDepth ? 1 : 0;
 
 
 
