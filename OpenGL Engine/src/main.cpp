@@ -38,10 +38,11 @@
         a) directional
         b) point
         c) spot
-   13) lights only update when changed
-   14) shadow atlas only updates on change 
-   15) Animated shadow casted Imp inside of sponza 
-   16) Uber Shaders
+   13) Skybox
+   14) lights only update when changed
+   15) shadow atlas only updates on change 
+   16) Animated shadow casted Imp inside of sponza 
+   17) Uber Shaders
 
    Eventually
     1) Log draw calls

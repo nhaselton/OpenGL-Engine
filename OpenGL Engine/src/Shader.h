@@ -11,14 +11,12 @@
 class Shader {
 public:
     unsigned int ID = -1;
-    // constructor generates the shader on the fly
     // ------------------------------------------------------------------------
     Shader( const char* vertexPath, const char* fragmentPath );
-    Shader( const char* vertexPath, const char* fragmentPath, const char* geometryPath, int a,int b );
-    Shader( const char* path, bool geoShader = false );
+    Shader( const char* path );
 
-    void Create( const std::string& vertexPath, const std::string& fragmentPath , const std::string& geoPath);
-    void Create( const std::string& directory, bool geoShader );
+    void Create( const std::string& vertexPath, const std::string& fragmentPath );
+    void Create( const std::string& directory );
 
     void Use() {
         if ( ID == -1 )

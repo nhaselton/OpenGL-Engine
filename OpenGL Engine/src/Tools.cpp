@@ -258,6 +258,10 @@ Model LoadStaticModelGLTF( const char* _path ) {
 				int materialID = meshPrimJSON["material"];
 				JSON matJson = json["materials"][materialID];
 				Material& m = materials[materialID];
+				mesh.diffuseTexture = nullptr;
+				mesh.normalTexture = nullptr;
+				mesh.specularTexture = nullptr;
+
 
 				if ( m.baseColorTexture != -1 ) {
 					std::string texPath = directory;

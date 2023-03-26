@@ -41,21 +41,14 @@ void Common::Init() {
 
 	Entity e2;
 	e2.model = ResourceManager::Get().GetModel( "res/models/gltf/sponza/sponza.gltf" );
-	//e2.model = ResourceManager::Get().GetModel( "res/models/gltf/cube.glb.gltf" );
-	//e2.transform.SetPosition( glm::vec3( 0, 0, 0 ) );
+	e2.model->isStatic = true;
 	entites.push_back( e2 );
 
-
-	//Entity e3;
-	////e3.model = ResourceManager::Get().GetModel( "res/models/brain/brainstem.gltf" );
-	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" );
-	//
+	Entity e3;
+	e3.model = ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" );
+	e3.model->isStatic = false;
 	//LoadAnimations("res/models/gltf/imp/anim/imp_run_forward.gltf");
-	//e3.transform.SetScale( glm::vec3(.1f) );
-	//e3.model = ResourceManager::Get().GetModel( "res/models/gltf/simple_skin_2.gltf" );
-	//e3.model = ResourceManager::Get().GetModel( "res/models/brain/BrainStem.gltf" );
-	
-	//entites.push_back( e3 );
+	entites.push_back( e3 );
 
 	Light pointLight = {};
 	pointLight.lType = LIGHT_POINT;

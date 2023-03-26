@@ -27,12 +27,14 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	CreateShadowAtlas();
 
 	this->window = window;
-	dynamicShader = new Shader( "res/shaders/skeletalShader" );
+	dynamicShader = new Shader( "res/shaders/skeletalShader/skeletalShader.vs", "res/shaders/StaticLitShader/StaticLitShader.fs" );
 	staticShader = new Shader( "res/shaders/StaticLitShader" );
 	staticShadowShader = new Shader( "res/shaders/staticshadowshader" );
 	debugDepthQuadShader = new Shader( "res/shaders/depthShader" );
 	staticShadowCubeMapAtlasShader = new Shader( "res/shaders/CubeDepthAtlasShader" );
 	staticDepthPrepassShader = new Shader( "res/shaders/staticdepthpass" );
+	dynamicShadowShader = new Shader( "res/shaders/DynamicShadowShader" );
+
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
 	glEnable( GL_DEPTH_TEST );
@@ -164,8 +166,8 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	// == DEPTH PREPASS == // 
 	staticDepthPrepassShader->Use();
 	staticDepthPrepassShader->SetMat4( "view", camera->GetView() );
-	DrawModelR( staticDepthPrepassShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], true, glm::mat4( 1.0 ) );
-	glDepthFunc( GL_LEQUAL );
+	//DrawModelR( staticDepthPrepassShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], true, glm::mat4( 1.0 ) );
+	//glDepthFunc( GL_LEQUAL );
 
 	//TODO init singular light function
 	InitLights( lights );
@@ -175,13 +177,28 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	staticShader->SetBool( "showSpecularMap", showSpecularMap );
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 
+	dynamicShader->Use();
+	dynamicShader->SetMat4( "view", camera->GetView() );
+	dynamicShader->SetBool( "showNormalMap", showNormalMap );
+	dynamicShader->SetBool( "showSpecularMap", showSpecularMap );
+	dynamicShader->SetVec3( "viewPos", camera->transform.Position() );
 
-	DrawModelR( staticShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], true, glm::mat4( 1.0 ) );
-	glDepthFunc( GL_LESS );
+
+
+	for ( int i = 0; i < entities.size(); i++ ) {
+		Shader* shader = ( entities[i].model->isStatic ) ? staticShader : dynamicShader;
+		shader->Use();
+		Model* model = entities[i].model;
+		if ( !model->isStatic )
+			ComputeHierarchy( ResourceManager::Get().GetAnimation("idle"), index, &model->nodes[model->rootNode], glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
+
+		DrawModelR( shader, entities[i].model, &entities[i].model->nodes[entities[i].model->rootNode], true , glm::scale(glm::mat4(1.0),glm::vec3(.5f)));
+	}
+	//glDepthFunc( GL_LESS );
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
-		lights[0].pos = camera->transform.Position();
-		lights[0].direction = camera->GetForward();
+		lights[2].pos = camera->transform.Position();
+		lights[2].direction = camera->GetForward();
 	}
 }
 
@@ -264,11 +281,13 @@ void Renderer::DrawSpotLight( Light& light, std::vector<Entity>& entities ) {
 	glm::mat4 view = glm::lookAt( light.pos, light.pos + light.direction, glm::vec3( 0, 1, 0 ) );
 	glm::mat4 lightSpaceMatrix = lightProjection * view;
 
-	staticShadowShader->Use();
-	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
-	light.lightSpaceMatrix = lightSpaceMatrix;
-
-	DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	for ( int i = 0; i < entities.size(); i++ ) {
+		Shader* shader = ( entities[i].model->isStatic ) ? staticShadowShader : dynamicShadowShader;
+		shader->Use();
+		shader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
+		light.lightSpaceMatrix = lightSpaceMatrix;
+		DrawModelR( shader, entities[i].model, &entities[i].model->nodes[entities[i].model->rootNode], false, glm::scale( glm::mat4( 1.0 ), glm::vec3( .5f ) ) );
+	}
 }
 
 
@@ -413,7 +432,7 @@ void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities
 	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
 	light.lightSpaceMatrix = lightSpaceMatrix;
 
-	float scaledSize = float( light.shadowMapSize.x ) / 8192.0;
+	float scaledSize = float( light.shadowMapSize.x ) / SHADOW_ATLAS_WIDTH;
 	DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 }
 
@@ -464,7 +483,7 @@ void Renderer::DrawModelR( Shader* shader, Model* model, Node* node, bool should
 	}
 
 	for ( int n = 0; n < node->children.size(); n++ ) {
-		DrawModelR( shader, model, node->children[n], shouldTexture, glm::mat4( 1.0 ) );
+		DrawModelR( shader, model, node->children[n], shouldTexture, modelSpace );
 	}
 }
 
@@ -558,7 +577,7 @@ void Renderer::renderQuad() {
 	glBindVertexArray( 0 );
 }
 
-void ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) ) {
+void Renderer::ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent ) {
 	node->computedOffset = node->t.Matrix();//animation offset
 	if ( animation ) {
 

@@ -35,6 +35,7 @@ private:
 	class Shader*	staticShadowCubeMapAtlasShader;
 	class Shader*	staticDepthPrepassShader;
 	class Shader*	staticShadowShader;
+	class Shader*	dynamicShadowShader;
 	class Shader*	debugDepthQuadShader;
 
 
@@ -76,6 +77,8 @@ private:
 	void			CreateShadowAtlas();
 	void			DebugPrintShadowAtlas();
 	//returns UV coords of texture atlas slot
-	AtlasLocation		FindFreeSpaceInShadowAltas( shadowMapType type, int shadowWidth, int shadowHeight );
+	AtlasLocation	FindFreeSpaceInShadowAltas( shadowMapType type, int shadowWidth, int shadowHeight );
+	void			ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) );
+
 
 };
