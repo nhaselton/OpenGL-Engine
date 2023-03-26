@@ -62,11 +62,11 @@ void Renderer::Init( Window* window, Camera* camera ) {
 
 	shadowAtlasContents = ( unsigned int* ) malloc( numInts * sizeof( int ) );
 	memset( shadowAtlasContents, 0, numInts * sizeof( int ) );
-
-
 	//FindFreeSpaceInShadowAltas( SHADOW_MAP_OMNIDIRECTIONAL, 1024, 1024 );
 }
 
+
+//TODO CHECK CUBE MAP BOUNDS BETTER LATER
 void Renderer::CreateShadowAtlas() {
 	glGenFramebuffers( 1, &shadowAtlasFBO );
 
@@ -100,6 +100,7 @@ void Renderer::CreateShadowAtlas() {
 	//bind image here, it never gets unbound because 15 is reserved for it
 	glActiveTexture( GL_TEXTURE15 );
 	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
+
 
 }
 void Renderer::CreateDepthMap() {
@@ -183,10 +184,10 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 	glClear( GL_DEPTH_BUFFER_BIT );
 
-	DrawDirectionalLight( lights[1], entities );
-	DrawSpotLight( lights[2], entities );
 	DrawPointLight( lights[0], entities );
-	 
+	//DrawDirectionalLight( lights[1], entities );
+	//DrawSpotLight( lights[2], entities );
+
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	glViewport( 0, 0, 1280, 720 );
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
@@ -216,11 +217,17 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 		lights[0].pos = camera->transform.Position();
 		lights[0].direction = camera->GetForward();
 	}
+
+
 }
 
 //wonder if i could figure out how to do this with 1 viewport, find start pos, then i could get bounds and maybe draw correctly
 void Renderer::DrawPointLight( Light& light, std::vector<Entity>& entities ) {
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
+
+	if ( light.shadowAtlasLocation.index.x == -1 ) {
+		light.shadowAtlasLocation = FindFreeSpaceInShadowAltas( SHADOW_MAP_CUBE, SHADOW_WIDTH, SHADOW_HEIGHT );
+	}
 
 	float aspect = ( float ) SHADOW_WIDTH / ( float ) SHADOW_HEIGHT;
 	float near = 1.0f;
@@ -241,38 +248,40 @@ void Renderer::DrawPointLight( Light& light, std::vector<Entity>& entities ) {
 		-Y
 	*/
 
-	float size = SHADOW_WIDTH;//(float ) 1024.0 / 8192.0;
-	int xLoc = 4;
-	int yLoc = 4;
-	float scaledSize = 1024.0 / 8192.0;
-	light.shadowAtlasLocation.texCoords = glm::vec4( xLoc * scaledSize, yLoc * scaledSize, ( xLoc + 1 ) * scaledSize, ( yLoc + 1 ) * scaledSize );
+	float size = SHADOW_WIDTH;
+	int xLoc = light.shadowAtlasLocation.index.x;
+	int yLoc = light.shadowAtlasLocation.index.y;
+	
+	//float scaledSize = 1024.0 / 8192.0;
+	//light.shadowAtlasLocation.texCoords = glm::vec4( xLoc * scaledSize, yLoc * scaledSize, ( xLoc + 1 ) * scaledSize, ( yLoc + 1 ) * scaledSize );
 
 	staticShadowCubeMapAtlasShader->Use();
 	staticShadowCubeMapAtlasShader->SetFloat( "far_plane", light.farPlane );
 	staticShadowCubeMapAtlasShader->SetVec3( "lightPos", light.pos );
+	
+	int tileSize = SHADOW_WIDTH / 512;
 
-	//Center
-	glViewport( xLoc * size, yLoc * size, size, size );
+	glViewport( xLoc * VIEWPORT_INDEX_SIZE, yLoc * VIEWPORT_INDEX_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[4] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Top
-	glViewport( ( xLoc + 0 ) * size, ( yLoc - 1 ) * size, size, size );
+	glViewport( ( xLoc + 0* tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc - 1 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[2] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Bottom
-	glViewport( ( xLoc + 0 ) * size, ( yLoc + 1 ) * size, size, size );
+	glViewport( ( xLoc + 0* tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 1 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[3] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Left
-	glViewport( ( xLoc - 1 ) * size, ( yLoc + 0 ) * size, size, size );
+	glViewport( ( xLoc - 1 * tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 0 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[1] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Right 1
-	glViewport( ( xLoc + 1 ) * size, ( yLoc + 0 ) * size, size, size );
+	glViewport( ( xLoc + 1 * tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 0 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[0] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	//Right 2
-	glViewport( ( xLoc + 2 ) * size, ( yLoc + 0 ) * size, size, size );
+	glViewport( ( xLoc + 2 * tileSize ) * VIEWPORT_INDEX_SIZE, ( yLoc + 0 * tileSize ) * VIEWPORT_INDEX_SIZE, size, size );
 	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[5] );
 	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 }
@@ -286,7 +295,7 @@ void Renderer::DrawSpotLight( Light& light, std::vector<Entity>& entities ) {
 	if ( light.shadowAtlasLocation.index.x == -1 ) {
 		light.shadowAtlasLocation = FindFreeSpaceInShadowAltas( SHADOW_MAP_OMNIDIRECTIONAL, SHADOW_WIDTH, SHADOW_HEIGHT );
 	}
-	
+
 	int texX = light.shadowAtlasLocation.index.x;
 	int texY = light.shadowAtlasLocation.index.y;
 	glViewport( texX * VIEWPORT_INDEX_SIZE, texY * VIEWPORT_INDEX_SIZE, SHADOW_WIDTH, SHADOW_HEIGHT );
@@ -350,46 +359,107 @@ AtlasLocation Renderer::FindFreeSpaceInShadowAltas( shadowMapType type, int shad
 
 	if ( type == SHADOW_MAP_OMNIDIRECTIONAL ) {
 
-	bool done = false;
-	unsigned int locations[100];
-	int numLocations = 0;
-	for ( int y =0 ; y < totalNumTilesY- ( tilesNeededX - 1); y++ )
-		for ( int x = 0; x < totalNumTilesX - ( tilesNeededY - 1 ); x++ ) {
-			if ( done ) break;
-			int loc = ( y * totalNumTilesX + x );
-			if ( checkBit( shadowAtlasContents, loc ) == 0 ) {
-				numLocations = 0;
-				bool isSpace = true;
-				for ( int j = 0; j < tilesNeededY; j++ )
-					for ( int n = 0; n < tilesNeededX; n++ ) {
-						int plusX = n;
-						int plusY = totalNumTilesY * j;
-						int newLoc = loc + plusY + plusX;
-						locations[numLocations++] = newLoc;
-						if ( checkBit( shadowAtlasContents, newLoc ) == 1 ) {
-							isSpace = false;
-						}
-					}
-				if ( isSpace ) {
-					done = true;
-					for ( int i = 0; i < numLocations; i++ )
-						setBit( shadowAtlasContents, locations[i], 1 );
+		bool done = false;
+		unsigned int locations[100];
+		int numLocations = 0;
 
-					//Get UV coords
-					//16x16
-					float minX = ( float ) x / 16.0f;
-					float minY = ( float ) y / 16.0f;
-					float maxX = ( float ) ( x + tilesNeededX) / 16.0f;
-					float maxY = ( float ) ( y + tilesNeededY) / 16.0f;
-					AtlasLocation loc;
-					loc.texCoords = glm::vec4( minX, minY, maxX, maxY );
-					loc.index = glm::ivec2( x, y );
-					return loc;
+		for ( int y = 0; y < totalNumTilesY - ( tilesNeededX - 1 ); y++ )
+			for ( int x = 0; x < totalNumTilesX - ( tilesNeededY - 1 ); x++ ) {
+				if ( done ) break;
+				int loc = ( y * totalNumTilesX + x );
+				if ( checkBit( shadowAtlasContents, loc ) == 0 ) {
+					numLocations = 0;
+					bool isSpace = true;
+					for ( int j = 0; j < tilesNeededY; j++ )
+						for ( int n = 0; n < tilesNeededX; n++ ) {
+							int plusX = n;
+							int plusY = totalNumTilesY * j;
+							int newLoc = loc + plusY + plusX;
+							locations[numLocations++] = newLoc;
+							if ( checkBit( shadowAtlasContents, newLoc ) == 1 ) {
+								isSpace = false;
+							}
+						}
+					if ( isSpace ) {
+						done = true;
+						for ( int i = 0; i < numLocations; i++ )
+							setBit( shadowAtlasContents, locations[i], 1 );
+
+						//Get UV coords
+						//16x16
+						float minX = ( float ) x / 16.0f;
+						float minY = ( float ) y / 16.0f;
+						float maxX = ( float ) ( x + tilesNeededX ) / 16.0f;
+						float maxY = ( float ) ( y + tilesNeededY ) / 16.0f;
+						AtlasLocation loc;
+						loc.texCoords = glm::vec4( minX, minY, maxX, maxY );
+						loc.index = glm::ivec2( x, y );
+						return loc;
+					}
 				}
 			}
-		}
 	}
 
+	if ( type == SHADOW_MAP_CUBE ) {
+
+		bool done = false;
+		unsigned int locations[100];
+		int numLocations = 0;
+
+		auto checkSquare = [] ( unsigned int* shadowAtlasContents, int boardWidth, int x, int y, int w, int h, unsigned int locations[100], int* numInts ) {
+			for ( int j = 0; j < h; j++ )
+				for ( int n = 0; n < w; n++ ) {
+					int loc = y * boardWidth + x;//TODO REMOVE CONSTNAT
+					int plusX = n;
+					int plusY = totalNumTilesY * j;
+					int newLoc = loc + plusY + plusX;
+					locations[*numInts] = newLoc;
+					(*numInts)++;
+					if ( checkBit( shadowAtlasContents, newLoc ) == 1 ) {
+						return  false;
+					}
+				}
+			return true;
+		};
+
+		for ( int y = tilesNeededX; y < totalNumTilesY - ( tilesNeededX - 1 ); y++ )
+			for ( int x = tilesNeededY; x < totalNumTilesX - ( tilesNeededX * 2 ); x++ ) {
+				if ( done ) break;
+				int loc = ( y * totalNumTilesX + x );
+				if ( checkBit( shadowAtlasContents, loc ) == 0 ) {
+					numLocations = 0;
+					bool isSpace = true;
+
+					isSpace = ( 
+						checkSquare( shadowAtlasContents, totalNumTilesX, x, y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
+						checkSquare( shadowAtlasContents, totalNumTilesX, x - tilesNeededX, y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
+						checkSquare( shadowAtlasContents, totalNumTilesX, x + tilesNeededX, y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
+						checkSquare( shadowAtlasContents, totalNumTilesX, x + (tilesNeededX * 2), y, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
+						checkSquare( shadowAtlasContents, totalNumTilesX, x, y - tilesNeededY, tilesNeededX, tilesNeededY, locations, &numLocations ) &&
+						checkSquare( shadowAtlasContents, totalNumTilesX, x, y + tilesNeededY, tilesNeededX, tilesNeededY, locations, &numLocations )
+						);
+
+
+					if ( isSpace ) {
+						done = true;
+						for ( int i = 0; i < numLocations; i++ )
+							setBit( shadowAtlasContents, locations[i], 1 );
+
+						//Get UV coords
+						//16x16
+						float minX = ( float ) x / 16.0f;
+						float minY = ( float ) y / 16.0f;
+						float maxX = ( float ) ( x + tilesNeededX ) / 16.0f;
+						float maxY = ( float ) ( y + tilesNeededY ) / 16.0f;
+						AtlasLocation loc;
+						loc.texCoords = glm::vec4( minX, minY, maxX, maxY );
+						loc.index = glm::ivec2( x, y );
+						
+ 						return loc;
+					}
+				}
+			}
+	}
 
 
 	std::cout << "COULD NOT FIND A FREE LOCATION, ATLAS LOOKS LIKE" << std::endl;
@@ -402,7 +472,7 @@ AtlasLocation Renderer::FindFreeSpaceInShadowAltas( shadowMapType type, int shad
 void Renderer::DebugPrintShadowAtlas() {
 	for ( int y = 0; y < 8192 / 512; y++ ) {
 		for ( int x = 0; x < 8192 / 512; x++ ) {
-			std::cout << checkBit( shadowAtlasContents, y * (8192 / 512) + x );
+			std::cout << checkBit( shadowAtlasContents, y * ( 8192 / 512 ) + x );
 		}
 		std::cout << std::endl;
 	}
@@ -529,7 +599,7 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 				shader->SetFloat( prefix + "cutoff", lights[i].cutoff );
 				shader->SetFloat( prefix + "farPlane", lights[i].farPlane );
 				shader->SetFloat( prefix + "outerCutoff", lights[i].outerCutoff );
-				shader->SetVec4( prefix + "shadowUVs", lights[i].shadowAtlasLocation.texCoords);
+				shader->SetVec4( prefix + "shadowUVs", lights[i].shadowAtlasLocation.texCoords );
 				shader->SetInt( prefix + "ID", numPointLights - 1 );
 			}
 
