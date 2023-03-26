@@ -32,6 +32,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticShadowShader = new Shader( "res/shaders/staticshadowshader" );
 	debugDepthQuadShader = new Shader( "res/shaders/depthShader" );
 	staticShadowCubeMapAtlasShader = new Shader( "res/shaders/CubeDepthAtlasShader" );
+	dynamicShadowCubeMapAtlasShader = new Shader( "res/shaders/CubeDepthAtlasShader" );
 	staticDepthPrepassShader = new Shader( "res/shaders/staticdepthpass" );
 	dynamicShadowShader = new Shader( "res/shaders/DynamicShadowShader" );
 
@@ -166,8 +167,8 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	// == DEPTH PREPASS == // 
 	staticDepthPrepassShader->Use();
 	staticDepthPrepassShader->SetMat4( "view", camera->GetView() );
-	//DrawModelR( staticDepthPrepassShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], true, glm::mat4( 1.0 ) );
-	//glDepthFunc( GL_LEQUAL );
+	DrawModelR( staticDepthPrepassShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	glDepthFunc( GL_LEQUAL );
 
 	//TODO init singular light function
 	InitLights( lights );
@@ -194,11 +195,11 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 
 		DrawModelR( shader, entities[i].model, &entities[i].model->nodes[entities[i].model->rootNode], true , glm::scale(glm::mat4(1.0),glm::vec3(.5f)));
 	}
-	//glDepthFunc( GL_LESS );
+	glDepthFunc( GL_LESS );
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
-		lights[2].pos = camera->transform.Position();
-		lights[2].direction = camera->GetForward();
+		lights[0].pos = camera->transform.Position();
+		lights[0].direction = camera->GetForward();
 	}
 }
 
@@ -233,35 +234,53 @@ void Renderer::DrawPointLight( Light& light, std::vector<Entity>& entities ) {
 	int xLoc = light.shadowAtlasLocation.index.x;
 	int yLoc = light.shadowAtlasLocation.index.y;
 
+	dynamicShadowCubeMapAtlasShader->Use();
+	dynamicShadowCubeMapAtlasShader->SetFloat( "far_plane", light.farPlane );
+	dynamicShadowCubeMapAtlasShader->SetVec3( "lightPos", light.pos );
+	
 	staticShadowCubeMapAtlasShader->Use();
 	staticShadowCubeMapAtlasShader->SetFloat( "far_plane", light.farPlane );
 	staticShadowCubeMapAtlasShader->SetVec3( "lightPos", light.pos );
 
+
 	int tileSize = light.shadowMapSize.x / SHADOW_ATLAS_TILE_SIZE;
 
+	//sets the dynamci and static light var
+	auto SetLightSpace([]( Shader* a, Shader* b,glm::mat4 val ) {
+		a->Use();
+		a->SetMat4( "lightSpaceMatrix", val );
+		b->Use();
+		b->SetMat4( "lightSpaceMatrix", val );
+	});
+
 	glViewport( xLoc * SHADOW_ATLAS_TILE_SIZE, yLoc * SHADOW_ATLAS_TILE_SIZE, size, size );
-	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[4] );
-	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	SetLightSpace( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, shadowTransforms[4] );
+	DrawScene( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, false, entities );
+	
 	//Top
 	glViewport( ( xLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc - 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
-	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[2] );
-	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	SetLightSpace( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, shadowTransforms[2] );
+	DrawScene( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, false, entities );
+
 	//Bottom
 	glViewport( ( xLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
-	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[3] );
-	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	SetLightSpace( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, shadowTransforms[3] );
+	DrawScene( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, false, entities );
+
 	//Left
 	glViewport( ( xLoc - 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
-	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[1] );
-	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	SetLightSpace( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, shadowTransforms[1] );
+	DrawScene( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, false, entities );
+
 	//Right 1
 	glViewport( ( xLoc + 1 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
-	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[0] );
-	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	SetLightSpace( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, shadowTransforms[0] );
+	DrawScene( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, false, entities );
+	
 	//Right 2
 	glViewport( ( xLoc + 2 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, ( yLoc + 0 * tileSize ) * SHADOW_ATLAS_TILE_SIZE, size, size );
-	staticShadowCubeMapAtlasShader->SetMat4( "lightSpaceMatrix", shadowTransforms[5] );
-	DrawModelR( staticShadowCubeMapAtlasShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	SetLightSpace( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, shadowTransforms[5] );
+	DrawScene( staticShadowCubeMapAtlasShader, dynamicShadowCubeMapAtlasShader, false, entities );
 }
 
 void Renderer::DrawSpotLight( Light& light, std::vector<Entity>& entities ) {
@@ -281,11 +300,20 @@ void Renderer::DrawSpotLight( Light& light, std::vector<Entity>& entities ) {
 	glm::mat4 view = glm::lookAt( light.pos, light.pos + light.direction, glm::vec3( 0, 1, 0 ) );
 	glm::mat4 lightSpaceMatrix = lightProjection * view;
 
+	staticShadowShader->Use();
+	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
+	dynamicShadowShader->Use();
+	dynamicShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
+	light.lightSpaceMatrix = lightSpaceMatrix;
+
+	DrawScene( staticShadowShader, dynamicShadowShader, false, entities );
+}
+
+
+void Renderer::DrawScene( Shader* staticShader, Shader* dynamicShader, bool drawTextures, std::vector<Entity>& entities ) {
 	for ( int i = 0; i < entities.size(); i++ ) {
-		Shader* shader = ( entities[i].model->isStatic ) ? staticShadowShader : dynamicShadowShader;
+		Shader* shader = ( entities[i].model->isStatic ) ? staticShader : dynamicShader;
 		shader->Use();
-		shader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
-		light.lightSpaceMatrix = lightSpaceMatrix;
 		DrawModelR( shader, entities[i].model, &entities[i].model->nodes[entities[i].model->rootNode], false, glm::scale( glm::mat4( 1.0 ), glm::vec3( .5f ) ) );
 	}
 }
@@ -427,13 +455,15 @@ void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities
 	glm::mat4 view = glm::lookAt( light.pos, light.pos + light.direction, glm::vec3( 0, 1, 0 ) );
 
 	glm::mat4 lightSpaceMatrix = lightProjection * view;
-
+	light.lightSpaceMatrix = lightSpaceMatrix;
+	
 	staticShadowShader->Use();
 	staticShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
+	dynamicShadowShader->Use();
+	dynamicShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
 	light.lightSpaceMatrix = lightSpaceMatrix;
-
-	float scaledSize = float( light.shadowMapSize.x ) / SHADOW_ATLAS_WIDTH;
-	DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
+	DrawScene( staticShadowShader, dynamicShadowShader, false, entities );
+	//DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 }
 
 

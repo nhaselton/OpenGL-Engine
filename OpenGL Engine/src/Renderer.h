@@ -21,6 +21,8 @@ enum shadowMapType {
 #define bitflip(byte,nbit)  ((byte) ^=  (1<<(nbit)))
 #define bitcheck(byte,nbit) ((byte) &   (1<<(nbit)))
 
+class Shader;
+
 class Renderer {
 public:
 	Renderer();
@@ -30,13 +32,14 @@ public:
 	void			EndFrame();
 
 private:
-	class Shader*	staticShader;
-	class Shader*	dynamicShader;
-	class Shader*	staticShadowCubeMapAtlasShader;
-	class Shader*	staticDepthPrepassShader;
-	class Shader*	staticShadowShader;
-	class Shader*	dynamicShadowShader;
-	class Shader*	debugDepthQuadShader;
+	Shader*	staticShader;
+	Shader*	dynamicShader;
+	Shader*	staticShadowCubeMapAtlasShader;
+	Shader*	dynamicShadowCubeMapAtlasShader;
+	Shader*	staticDepthPrepassShader;
+	Shader*	staticShadowShader;
+	Shader*	dynamicShadowShader;
+	Shader*	debugDepthQuadShader;
 
 
 	class Window*	window;
@@ -69,7 +72,7 @@ private:
 private:
 	void			DrawModelR( Shader* shader, Model* model, Node* root , bool shouldTexture, glm::mat4 parent = glm::mat4(1.0));
 	void			DrawPointLight( Light& light , std::vector<Entity>& entities );
-	void			DrawSpotLight( Light& light , std::vector<Entity>& entities );
+	void			DrawSpotLight( Light& light, std::vector<Entity>& entities );
 	void			DrawDirectionalLight( Light& light , std::vector<Entity>& entities );
 	void			InitLights( std::vector<Light> lights );
 	void			BindTextures( Mesh* mesh );
@@ -79,6 +82,6 @@ private:
 	//returns UV coords of texture atlas slot
 	AtlasLocation	FindFreeSpaceInShadowAltas( shadowMapType type, int shadowWidth, int shadowHeight );
 	void			ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) );
-
+	void			DrawScene( Shader* staticShader, Shader* dynamicShader, bool drawTextures, std::vector<Entity>& entities );
 
 };

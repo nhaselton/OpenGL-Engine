@@ -69,7 +69,7 @@ void main(){
 	}
 
 	if ( showSpecularMap ){
-		specular = texture(specularMap, vTexCoords).b;
+		specular = texture(specularMap, vTexCoords).r;
 	}else{
 		specular = 1;
 	}
@@ -86,12 +86,12 @@ void main(){
 	//result += CalcDirectional( normal,specular );
 
 	//Point Lights
-	//for ( int i =0 ; i < numPointLights; i++ )
-	//	result += CalcPointLights(pointLights[i], normal, specular );
+	for ( int i =0 ; i < numPointLights; i++ )
+		result += CalcPointLights(pointLights[i], normal, specular );
 
 	//Spot Lights
-	for ( int i =0; i < numSpotLights; i++ )
-		result += CalcSpotLights(spotLights[i], normal, specular, i );
+	//for ( int i =0; i < numSpotLights; i++ )
+	//	result += CalcSpotLights(spotLights[i], normal, specular, i );
 	result += vec3(.05f);//ambient
 	
 	result *= color;
@@ -223,7 +223,6 @@ float CalcPointLightShadows(Light light){
 	return sampleShadow;
 }
 
-//todo fix
 float CalcShadow(vec4 fragLightSpace, Light light){
 	vec3 projCoords = fragLightSpace.xyz / fragLightSpace.w;
 	//maps from 0-1
@@ -279,7 +278,7 @@ vec3 CalcDirectional(vec3 normal ,float specular){
 	vec4 directionalLightLightFragPos = directionalLightSpaceMatrix * vec4(vFragPos, 1.0);
 	float shadow = CalcShadow(directionalLightLightFragPos, directionalLight );
 	
-	result = (1.0 - shadow) * diffuse *   directionalLight.color;
+	result = (1.0 - shadow) * diffuse *  directionalLight.color;
 	return result;
 }
 
@@ -326,8 +325,7 @@ vec3 CalcSpotLights(Light light, vec3 normal ,float specular, int lightID) {
     vec3 result = vec3(0);
     
     diffuse *= attenuation * intensity;
-    specular *= attenuation * intensity;
-    
+    specular *= attenuation;
 	
 	// -- Shadow -- //
 	vec4 lightFragPos = spotLightSpaceMatrices[lightID] * vec4(vFragPos, 1.0);
