@@ -28,7 +28,7 @@
     8) Shadow types Static
         a) directional ( Done )
         b) point ( Done )
-        c) spot ( Fix )
+        c) spot ( Done )
     11) Basic Shadow Atlas
     9) different sized shadow casters
     10) Multiple Shader casters

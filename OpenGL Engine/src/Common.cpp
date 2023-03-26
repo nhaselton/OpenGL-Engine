@@ -64,6 +64,7 @@ void Common::Init() {
 	pointLight.linear = 0.022;
 	pointLight.pos = glm::vec3( 1.4, 2, -.1f );
 	pointLight.quadratic = 0.019;
+	pointLight.shadowAtlasLocation.index = glm::ivec2( -1, -1 );
 	pointLight.farPlane = 25.0f;
 	lights.push_back( pointLight );
 	
@@ -72,6 +73,8 @@ void Common::Init() {
 	directional.color = glm::vec3( 1 );
 	directional.pos = glm::vec3( -8.3,14.2,-0.8);
 	directional.direction = glm::vec3( -0.7,-0.7,-0.1);
+	directional.shadowAtlasLocation.index = glm::ivec2( -1, -1 );
+	directional.farPlane = 25.0f;
 	lights.push_back( directional );
 
 	//camera.transform.SetRotation( directional.direction );
@@ -86,6 +89,8 @@ void Common::Init() {
 	spot.direction = glm::vec3(11,0.1,-0.8);
 	spot.quadratic = 0.019;	
 	spot.farPlane = 25.0f;
+	spot.shadowAtlasLocation.index = glm::ivec2( -1, -1 );
+
 	lights.push_back( spot );
 
 	//direction.z = sin( transform.Rotation().y ) * cos( transform.Rotation().x );

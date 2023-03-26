@@ -1,6 +1,11 @@
 #pragma once
 #include <glm/glm.hpp>
 
+struct AtlasLocation {
+	glm::ivec2 index;
+	glm::vec4 texCoords;
+};
+
 enum LightType {
 	LIGHT_POINT = 0,
 	LIGHT_DIRECTIONAL = 1,
@@ -29,5 +34,6 @@ struct Light {
 	glm::mat4 lightSpaceMatrix;
 
 	//shadow atlas
-	glm::vec4 shadowUVs;//0,0
+	//glm::vec4 shadowUVs;//0,0
+	AtlasLocation shadowAtlasLocation;
 };
