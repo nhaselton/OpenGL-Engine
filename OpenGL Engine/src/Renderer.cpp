@@ -185,8 +185,8 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glClear( GL_DEPTH_BUFFER_BIT );
 
 	DrawPointLight( lights[0], entities );
-	//DrawDirectionalLight( lights[1], entities );
-	//DrawSpotLight( lights[2], entities );
+	DrawDirectionalLight( lights[1], entities );
+	DrawSpotLight( lights[2], entities );
 
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	glViewport( 0, 0, 1280, 720 );
