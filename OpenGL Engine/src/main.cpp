@@ -53,7 +53,7 @@
         1) Transforms use velocity to move ( Done ) 
         2) Tick System
             a) Update Every 1/60 & draw infinitly ( Done ) 
-            b) interpolate & predict 
+            b) interpolate & predict Camera (Done ) 
             https://gafferongames.com/post/fix_your_timestep/
             https://dewitters.com/dewitters-gameloop/
             https://gameprogrammingpatterns.com/game-loop.html

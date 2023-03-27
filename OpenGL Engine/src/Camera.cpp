@@ -38,10 +38,16 @@ glm::mat4 Camera::GetInterpolatedView( float percent ) {
 	glm::vec3 _pos = posNow * percent + posPrev* ( 1.0f - percent );
 
 	//TODO fix rotations and use quat for angular velocity
-	glm::quat rotNow = glm::quat(transform.Rotation());
-	glm::quat rotPrev = transform.Rotation() - transform.RotationalVelocity();
-	glm::quat _rotQ = rotNow * percent + rotPrev * ( 1.0f - percent );
-	glm::vec3 _rot = glm::eulerAngles( _rotQ );
+	//glm::quat rotNow = glm::quat(transform.Rotation());
+	//glm::quat rotPrev = transform.Rotation() - transform.RotationalVelocity();
+	//glm::quat _rotQ = glm::slerp(rotPrev,rotNow, percent);
+	//glm::vec3 _rot = glm::eulerAngles( _rotQ );
+	
+	glm::vec3 rotNow = transform.Rotation();
+	glm::vec3 rotPrev = transform.Rotation() - transform.RotationalVelocity();
+	glm::vec3 _rot = ( rotNow ) *percent + rotPrev * ( 1.0f - percent );
+	//glm::vec3 _rot = transform.Rotation();
+
 	// Get Fowrard
 	glm::vec3 direction;
 	direction.x = cos( _rot.y ) * cos( _rot.x );

@@ -169,8 +169,8 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 	glClear( GL_DEPTH_BUFFER_BIT );
 
-	//DrawPointLight( lights[0], entities );
-	//DrawDirectionalLight( lights[1], entities );
+	DrawPointLight( lights[0], entities );
+	DrawDirectionalLight( lights[1], entities );
 	DrawSpotLight( lights[2], entities );
 
 	glm::mat4 view = camera->GetInterpolatedView( interp );

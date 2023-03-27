@@ -26,7 +26,6 @@ public:
 	void				ScaleTransform( glm::vec3 scale ) { this->scale += scale; }
 
 	void				Update() { position += velocity; rotation += rotationalVelocity; }
-
 	glm::mat4			Matrix();
 private:
 	glm::vec3			position;
