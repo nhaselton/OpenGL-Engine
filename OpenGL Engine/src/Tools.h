@@ -6,3 +6,4 @@
 Model			LoadStaticModelGLTF( const char* path );
 void			LoadAnimations( const char* path );
 Texture			LoadTexture( const char* path, TextureType textureType );
+Texture			LoadCubeMapTexture(const char* path[6]);

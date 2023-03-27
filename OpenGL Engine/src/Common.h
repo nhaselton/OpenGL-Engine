@@ -18,4 +18,8 @@ private:
 
 	std::vector<Entity> entites;
 	std::vector<Light> lights;
+
+	double			lastTime;
+	double			accum;
+	double			tickRate;
 };

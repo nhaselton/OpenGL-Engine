@@ -7,7 +7,7 @@ uniform mat4 model;
 
 uniform mat4[100] bones;
 uniform mat4 lightSpaceMatrix;
-
+out vec3 vFragPos;
 void main() {
     mat4 skinMat =     aWeights.x * bones[aBoneIDs.x] +
                     aWeights.y * bones[aBoneIDs.y] +

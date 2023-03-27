@@ -86,12 +86,12 @@ void main(){
 	//result += CalcDirectional( normal,specular );
 
 	//Point Lights
-	for ( int i =0 ; i < numPointLights; i++ )
-		result += CalcPointLights(pointLights[i], normal, specular );
+	//for ( int i =0 ; i < numPointLights; i++ )
+	//	result += CalcPointLights(pointLights[i], normal, specular );
 
 	//Spot Lights
-	//for ( int i =0; i < numSpotLights; i++ )
-	//	result += CalcSpotLights(spotLights[i], normal, specular, i );
+	for ( int i =0; i < numSpotLights; i++ )
+		result += CalcSpotLights(spotLights[i], normal, specular, i );
 	result += vec3(.05f);//ambient
 	
 	result *= color;

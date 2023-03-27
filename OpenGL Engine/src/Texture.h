@@ -4,6 +4,7 @@ enum TextureType {
 	TEXTURE_TYPE_ALBEDO,
 	TEXTURE_TYPE_NORMAL,
 	TEXTURE_TYPE_SPECULAR,
+	TEXTURE_TYPE_CUBE
 };
 
 struct Texture {

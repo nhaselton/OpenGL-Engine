@@ -8,12 +8,21 @@
 #include "Window.h"
 #include "Shader.h"
 #include "ResourceManager.h" 
+#include "Tools.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
-
 int index;
+
+//cube vertiecs for a skybox
+float skyboxVertices[] = {
+-1.0f,1.0f,-1.0f,-1.0f,-1.0f,-1.0f,1.0f,-1.0f,-1.0f,1.0f,-1.0f,-1.0f,1.0f,1.0f,-1.0f,-1.0f,1.0f,-1.0f,-1.0f,-1.0f,1.0f,
+-1.0f,-1.0f,-1.0f,-1.0f,1.0f,-1.0f,-1.0f,1.0f,-1.0f,-1.0f,1.0f,1.0f,-1.0f,-1.0f,1.0f,1.0f,-1.0f,-1.0f,1.0f,-1.0f,1.0f,
+1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,-1.0f,1.0f,-1.0f,-1.0f,-1.0f,-1.0f,1.0f,-1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,
+1.0f,-1.0f,1.0f,-1.0f,-1.0f,1.0f,-1.0f,1.0f,-1.0f,1.0f,1.0f,-1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,1.0f,-1.0f,1.0f,1.0f,-1.0f,1.0f,-1.0f,
+-1.0f,-1.0f,-1.0f,-1.0f,-1.0f,1.0f,1.0f,-1.0f,-1.0f,1.0f,-1.0f,-1.0f,-1.0f,-1.0f,1.0f,1.0f,-1.0f,1.0f
+};
 
 Renderer::Renderer() {
 	index = 0;
@@ -32,9 +41,11 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticShadowShader = new Shader( "res/shaders/staticshadowshader" );
 	debugDepthQuadShader = new Shader( "res/shaders/depthShader" );
 	staticShadowCubeMapAtlasShader = new Shader( "res/shaders/CubeDepthAtlasShader" );
-	dynamicShadowCubeMapAtlasShader = new Shader( "res/shaders/CubeDepthAtlasShader" );
+	dynamicShadowCubeMapAtlasShader = new Shader( "res/shaders/dynamicCubeDepthAtlasShader" );
 	staticDepthPrepassShader = new Shader( "res/shaders/staticdepthpass" );
 	dynamicShadowShader = new Shader( "res/shaders/DynamicShadowShader" );
+	skyboxShader = new Shader( "res/shaders/skyboxShader" );
+
 
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
@@ -73,6 +84,17 @@ void Renderer::Init( Window* window, Camera* camera ) {
 
 	shadowAtlasContents = ( unsigned int* ) malloc( numInts * sizeof( int ) );
 	memset( shadowAtlasContents, 0, numInts * sizeof( int ) );
+
+
+	//todo add to resource managaer and not have recreated every time
+	const char* paths[6] = { "res/textures/skybox/right.jpg",
+		"res/textures/skybox/left.jpg",
+		"res/textures/skybox/top.jpg",
+		"res/textures/skybox/bottom.jpg",
+		"res/textures/skybox/front.jpg",
+		"res/textures/skybox/back.jpg" };
+
+	skybox = CreateSkyBox( paths );
 }
 
 
@@ -134,11 +156,12 @@ void Renderer::BeginFrame() {
 	ImGui::Begin( "Frame" );
 	ImGui::SliderInt( "frame", &index, 0, 31 );
 	ImGui::End();
+
 }
 
 #include "Input.h"
 
-void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
+void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights, double interp ) {
 	//for some reason this gets unbound
 	glActiveTexture( GL_TEXTURE15 );
 	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
@@ -146,9 +169,11 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 	glClear( GL_DEPTH_BUFFER_BIT );
 
-	DrawPointLight( lights[0], entities );
-	DrawDirectionalLight( lights[1], entities );
+	//DrawPointLight( lights[0], entities );
+	//DrawDirectionalLight( lights[1], entities );
 	DrawSpotLight( lights[2], entities );
+
+	glm::mat4 view = camera->GetInterpolatedView( interp );
 
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	glViewport( 0, 0, 1280, 720 );
@@ -166,25 +191,23 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 
 	// == DEPTH PREPASS == // 
 	staticDepthPrepassShader->Use();
-	staticDepthPrepassShader->SetMat4( "view", camera->GetView() );
+	staticDepthPrepassShader->SetMat4( "view", view );
 	DrawModelR( staticDepthPrepassShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 	glDepthFunc( GL_LEQUAL );
 
 	//TODO init singular light function
 	InitLights( lights );
 	staticShader->Use();
-	staticShader->SetMat4( "view", camera->GetView() );
+	staticShader->SetMat4( "view", view );
 	staticShader->SetBool( "showNormalMap", showNormalMap );
 	staticShader->SetBool( "showSpecularMap", showSpecularMap );
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 
 	dynamicShader->Use();
-	dynamicShader->SetMat4( "view", camera->GetView() );
+	dynamicShader->SetMat4( "view", view );
 	dynamicShader->SetBool( "showNormalMap", showNormalMap );
 	dynamicShader->SetBool( "showSpecularMap", showSpecularMap );
 	dynamicShader->SetVec3( "viewPos", camera->transform.Position() );
-
-
 
 	for ( int i = 0; i < entities.size(); i++ ) {
 		Shader* shader = ( entities[i].model->isStatic ) ? staticShader : dynamicShader;
@@ -198,9 +221,26 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glDepthFunc( GL_LESS );
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
-		lights[0].pos = camera->transform.Position();
-		lights[0].direction = camera->GetForward();
+		lights[2].pos = camera->transform.Position();
+		lights[2].direction = camera->GetForward();
 	}
+	DrawSkyBox();
+}
+
+void Renderer::DrawSkyBox() {
+	//Skybox
+	glDepthMask( GL_FALSE );
+	skyboxShader->Use();
+	skyboxShader->SetMat4( "view", glm::mat4( glm::mat3( camera->GetView() ) ) );
+	skyboxShader->SetMat4( "projection", projection );
+	skyboxShader->SetInt( "skybox", 0 );
+	glActiveTexture( GL_TEXTURE0 );
+	glBindTexture( GL_TEXTURE_CUBE_MAP, skybox.cubeMapTex );
+	glDepthFunc( GL_LEQUAL );
+	glBindVertexArray( skybox.vao );
+	glDrawArrays( GL_TRIANGLES, 0, 36 );
+	glDepthMask( GL_TRUE );
+	glDepthFunc( GL_LESS );
 }
 
 //wonder if i could figure out how to do this with 1 viewport, find start pos, then i could get bounds and maybe draw correctly
@@ -229,7 +269,6 @@ void Renderer::DrawPointLight( Light& light, std::vector<Entity>& entities ) {
 	 -X +Z +X -Z
 		-Y
 	*/
-
 	float size = light.shadowMapSize.x;
 	int xLoc = light.shadowAtlasLocation.index.x;
 	int yLoc = light.shadowAtlasLocation.index.y;
@@ -518,6 +557,9 @@ void Renderer::DrawModelR( Shader* shader, Model* model, Node* node, bool should
 }
 
 void Renderer::EndFrame() {
+
+
+
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 	glfwSwapBuffers( window->GetHandle() );
@@ -580,6 +622,26 @@ void Renderer::InitLights( std::vector<Light> lights ) {
 		shader->SetInt( "numPointLights", numPointLights );
 		shader->SetInt( "numSpotLights", numSpotLights );
 	}
+}
+
+SkyBox Renderer::CreateSkyBox(const char* paths[6]) {
+	cubeMap = LoadCubeMapTexture( paths );
+	
+
+	unsigned int skyboxVAO, skyboxVBO;
+	glGenVertexArrays( 1, &skyboxVAO );
+	glGenBuffers( 1, &skyboxVBO );
+	glBindVertexArray( skyboxVAO );
+	glBindBuffer( GL_ARRAY_BUFFER, skyboxVBO );
+	glBufferData( GL_ARRAY_BUFFER, sizeof( skyboxVertices ), &skyboxVertices, GL_STATIC_DRAW );
+	glEnableVertexAttribArray( 0 );
+	glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof( float ), ( void* ) 0 );
+
+	SkyBox box;
+	box.vao = skyboxVAO;
+	box.vbo = skyboxVBO;
+	box.cubeMapTex = cubeMap.textureID;
+	return box;
 }
 
 void Renderer::renderQuad() {

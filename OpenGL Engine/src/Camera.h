@@ -13,4 +13,5 @@ public:
 	
 	glm::vec3 GetForward();
 	glm::mat4 GetView();
+	glm::mat4 GetInterpolatedView( float percent );
 };
