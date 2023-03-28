@@ -7,19 +7,23 @@
 class Common {
 public:
 	Common();
-	void			Init();
-	void			Frame();
-	void			UpdateInput();
+	void				Init();
+	void				Frame();
+	void				UpdateInput();
 private:
-	Camera			camera;
+	Camera				camera;
 
-	class Window*	window;
-	class Renderer* renderer;
+	class Window*		window;
+	class Renderer*		renderer;
 
-	std::vector<Entity> entites;
-	std::vector<Light> lights;
+	std::vector<Entity>	entites;
+	std::vector<Light>	lights;
 
-	double			lastTime;
-	double			accum;
-	double			tickRate;
+	unsigned int		width;
+	unsigned int		height;
+
+	//Timing for tik system
+	double				lastTime;
+	double				accum;
+	double				tickRate;
 };

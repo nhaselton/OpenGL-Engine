@@ -94,7 +94,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 		"res/textures/skybox/front.jpg",
 		"res/textures/skybox/back.jpg" };
 
-	skybox = CreateSkyBox( paths );
+	//skybox = CreateSkyBox( paths );
 }
 
 
@@ -162,6 +162,9 @@ void Renderer::BeginFrame() {
 #include "Input.h"
 
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights, double interp ) {
+	entities[0].model.animator.currentFrame = index;
+	entities[0].model.CalculateNodesR( &entities[0].model.GetRenderModel()->nodes[entities[0].model.GetRenderModel()->rootNode], glm::mat4( 1.0 ) );
+
 	//for some reason this gets unbound
 	glActiveTexture( GL_TEXTURE15 );
 	glBindTexture( GL_TEXTURE_2D, shadowAtlasImage );
@@ -176,7 +179,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glm::mat4 view = camera->GetInterpolatedView( interp );
 
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-	glViewport( 0, 0, 1280, 720 );
+	glViewport( 0, 0, window->GetWidth(), window->GetHeight());
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
 	glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
 
@@ -192,9 +195,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	// == DEPTH PREPASS == // 
 	staticDepthPrepassShader->Use();
 	staticDepthPrepassShader->SetMat4( "view", view );
-	DrawModelR( staticDepthPrepassShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
-	glDepthFunc( GL_LEQUAL );
-
+	
 	//TODO init singular light function
 	InitLights( lights );
 	staticShader->Use();
@@ -210,21 +211,21 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	dynamicShader->SetVec3( "viewPos", camera->transform.Position() );
 
 	for ( int i = 0; i < entities.size(); i++ ) {
-		Shader* shader = ( entities[i].model->isStatic ) ? staticShader : dynamicShader;
+		Model* model = entities[i].model.GetRenderModel();
+		Shader* shader = ( model->isStatic ) ? staticShader : dynamicShader;
 		shader->Use();
-		Model* model = entities[i].model;
-		if ( !model->isStatic )
-			ComputeHierarchy( ResourceManager::Get().GetAnimation("idle"), index, &model->nodes[model->rootNode], glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
+		//if ( !model->isStatic )
+		//	ComputeHierarchyR( ResourceManager::Get().GetAnimation("idle"), index, &model->nodes[model->rootNode], glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
 
-		DrawModelR( shader, entities[i].model, &entities[i].model->nodes[entities[i].model->rootNode], true , glm::scale(glm::mat4(1.0),glm::vec3(.5f)));
+		DrawEntity( shader, entities[i] , true);
+		//DrawModelR( shader, model, &model->nodes[model->rootNode], true , glm::scale(glm::mat4(1.0),glm::vec3(.5f)));
 	}
-	glDepthFunc( GL_LESS );
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
 		lights[2].pos = camera->transform.Position();
 		lights[2].direction = camera->GetForward();
 	}
-	DrawSkyBox();
+	//DrawSkyBox();
 }
 
 void Renderer::DrawSkyBox() {
@@ -351,9 +352,11 @@ void Renderer::DrawSpotLight( Light& light, std::vector<Entity>& entities ) {
 
 void Renderer::DrawScene( Shader* staticShader, Shader* dynamicShader, bool drawTextures, std::vector<Entity>& entities ) {
 	for ( int i = 0; i < entities.size(); i++ ) {
-		Shader* shader = ( entities[i].model->isStatic ) ? staticShader : dynamicShader;
+		Model* model = entities[i].model.GetRenderModel();
+		Shader* shader = ( model->isStatic ) ? staticShader : dynamicShader;
 		shader->Use();
-		DrawModelR( shader, entities[i].model, &entities[i].model->nodes[entities[i].model->rootNode], false, glm::scale( glm::mat4( 1.0 ), glm::vec3( .5f ) ) );
+		//DrawModelR( shader, model, &model->nodes[model->rootNode], false, glm::scale( glm::mat4( 1.0 ), glm::vec3( .5f ) ) );
+		DrawEntity( shader, entities[i] , drawTextures);
 	}
 }
 
@@ -502,7 +505,6 @@ void Renderer::DrawDirectionalLight( Light& light, std::vector<Entity>& entities
 	dynamicShadowShader->SetMat4( "lightSpaceMatrix", lightSpaceMatrix );
 	light.lightSpaceMatrix = lightSpaceMatrix;
 	DrawScene( staticShadowShader, dynamicShadowShader, false, entities );
-	//DrawModelR( staticShadowShader, entities[0].model, &entities[0].model->nodes[entities[0].model->rootNode], false, glm::mat4( 1.0 ) );
 }
 
 
@@ -522,43 +524,7 @@ void Renderer::BindTextures( Mesh* mesh ) {
 	}
 }
 
-void Renderer::DrawModelR( Shader* shader, Model* model, Node* node, bool shouldTexture, glm::mat4 parent ) {
-	shader->Use();
-	// Convert to model space
-	glm::mat4 modelSpace = parent * node->computedOffset;
-	glm::mat4 jointSpace = modelSpace * node->inverseBind;
-
-
-	if ( node->isJoint ) {
-		shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]", jointSpace );
-	}
-
-	for ( int i = 0; i < node->meshIndices.size(); i++ ) {
-		Mesh* mesh = &model->meshes[node->meshIndices[i]];//node->meshes[i];
-		mesh->BindVAO();
-
-		shader->SetMat4( "model", node->t.Matrix() );
-
-		if ( shouldTexture )
-			BindTextures( mesh );
-
-
-		if ( mesh->numIndices != 0 ) {
-			glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
-		}
-		else {
-			glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );
-		}
-	}
-
-	for ( int n = 0; n < node->children.size(); n++ ) {
-		DrawModelR( shader, model, node->children[n], shouldTexture, modelSpace );
-	}
-}
-
 void Renderer::EndFrame() {
-
-
 
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
@@ -669,10 +635,9 @@ void Renderer::renderQuad() {
 	glBindVertexArray( 0 );
 }
 
-void Renderer::ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent ) {
+void Renderer::ComputeHierarchyR( Animation* animation, float time, Node* node, glm::mat4 parent ) {
 	node->computedOffset = node->t.Matrix();//animation offset
 	if ( animation ) {
-
 		for ( int i = 0; i < animation->animChannels.size(); i++ ) {
 			AnimChannel* anim = &animation->animChannels[i];
 			if ( anim->nodeID == node->index && anim->rotations.size() > 0 ) {
@@ -688,6 +653,38 @@ void Renderer::ComputeHierarchy( Animation* animation, float time, Node* node, g
 		}
 	}
 
+
 	for ( int i = 0; i < node->children.size(); i++ )
-		ComputeHierarchy( animation, index, node->children[i], node->computedOffset );
+		ComputeHierarchyR( animation, index, node->children[i], node->computedOffset );
+}
+
+
+void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
+	Model* renderModel = ent.model.GetRenderModel();
+
+	for ( int i = 0; i < renderModel->nodes.size(); i++ ) {
+		Node* node = &ent.model.GetRenderModel()->nodes[i];
+
+		if ( node->isJoint )
+			shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]", ent.model.nodeData[node->index].boneData );
+		
+		
+		shader->SetMat4("model", node->t.Matrix());
+	
+		for ( int n = 0; n < node->meshIndices.size(); n++ ) {
+			Mesh* mesh = &renderModel->meshes[node->meshIndices[n]];
+			mesh->BindVAO();
+			
+			if ( shouldTexture )
+				BindTextures( mesh );
+
+			if ( mesh->numIndices != 0 ) {
+				glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
+			}
+			else {
+				glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );
+			}
+
+		}
+	}
 }

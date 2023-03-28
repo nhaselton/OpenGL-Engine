@@ -53,14 +53,11 @@
         1) Transforms use velocity to move ( Done ) 
         2) Tick System
             a) Update Every 1/60 & draw infinitly ( Done ) 
-            b) interpolate & predict Camera (Done ) 
-            https://gafferongames.com/post/fix_your_timestep/
-            https://dewitters.com/dewitters-gameloop/
-            https://gameprogrammingpatterns.com/game-loop.html
-        3) Consistent Window size
+            b) interpolate & predict Camera ( Done ) 
+        3) Consistent Window size ( Done )
 
         Eventaully
-        1) each animated model has a vector of nodes so you can for loop and not recursively draw 
+        1) each animated model has a vector of nodes so you can for loop all at beginning for multiple models , and not recursively draw every time     
    
    ======== GAME  ========
 

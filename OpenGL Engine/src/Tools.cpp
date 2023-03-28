@@ -227,6 +227,7 @@ Model LoadStaticModelGLTF( const char* _path ) {
 
 		//Used to get meshes for mesh* array inside node (at end of func.)
 		int nodeID = -1;
+		int meshID = 0;
 
 		for ( int n = 0; n < model.nodes.size(); n++ ) {
 			if ( model.nodes[n].meshIndex == i ) {
@@ -236,6 +237,7 @@ Model LoadStaticModelGLTF( const char* _path ) {
 		for ( int n = 0; n < meshJson["primitives"].size(); n++ ) {
 			Mesh mesh;
 			memset( &mesh, 0, sizeof( Mesh ) );
+			mesh.id = meshID++;
 			JSON meshAttributeJson = meshJson["primitives"][n]["attributes"];
 
 			//============= INDICES ==================

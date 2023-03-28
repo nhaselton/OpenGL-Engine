@@ -21,7 +21,6 @@ struct SkyBox {
 #define SHADOW_ATLAS_HEIGHT 8192
 #define SHADOW_ATLAS_TILE_SIZE 512 //tile size
 
-
 #define bitset(byte,nbit)   ((byte) |=  (1<<(nbit)))
 #define bitclear(byte,nbit) ((byte) &= ~(1<<(nbit)))
 #define bitflip(byte,nbit)  ((byte) ^=  (1<<(nbit)))
@@ -54,7 +53,6 @@ private:
 	glm::mat4		view;
 	glm::mat4		projection;
 
-	//BufferList		buffers;
 	unsigned int	shadowMapFBO;
 	unsigned int	depthMapImage;
 	
@@ -68,20 +66,18 @@ private:
 	unsigned int	quadVAO = 0;
 	unsigned int	quadVBO;
 
-	//cubemap
-	Texture			cubeMap;
-
 	bool			showNormalMap;
 	bool			showSpecularMap;
 	bool			showShadowAtlas;
 
 	// (8192 * 8192) / (512 * 512) bit representation of shadowAltas
 	unsigned int*	shadowAtlasContents;
+	
 	SkyBox			skybox;
-
+	Texture			cubeMap;
 
 private:
-	void			DrawModelR( Shader* shader, Model* model, Node* root , bool shouldTexture, glm::mat4 parent = glm::mat4(1.0));
+public:
 	void			DrawPointLight( Light& light , std::vector<Entity>& entities );
 	void			DrawSpotLight( Light& light, std::vector<Entity>& entities );
 	void			DrawDirectionalLight( Light& light , std::vector<Entity>& entities );
@@ -92,8 +88,9 @@ private:
 	void			DebugPrintShadowAtlas();
 	//returns UV coords of texture atlas slot
 	AtlasLocation	FindFreeSpaceInShadowAltas( shadowMapType type, int shadowWidth, int shadowHeight );
-	void			ComputeHierarchy( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) );
+	void			ComputeHierarchyR( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) );
 	void			DrawScene( Shader* staticShader, Shader* dynamicShader, bool drawTextures, std::vector<Entity>& entities );
 	SkyBox			CreateSkyBox(const char* paths[6]);
 	void			DrawSkyBox();
-	};
+	void			DrawEntity(Shader* shader, Entity ent,bool shouldTexture);
+};

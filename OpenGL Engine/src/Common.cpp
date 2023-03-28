@@ -16,35 +16,42 @@
 #include <glm/gtx/string_cast.hpp>
 
 Common::Common() {
+	width = 1280;
+	height = 720;
 }
 
 void Common::Init() {
-	camera.model = nullptr;
 	window = new Window;
-	window->Init();
+	window->Init(width,height);
 
 	renderer = new Renderer;
 	renderer->Init( window, &camera );
 
-	Entity e2;
-	e2.model = ResourceManager::Get().GetModel( "res/models/gltf/sponza/sponza.gltf" );
-	e2.model->isStatic = true;
-	entites.push_back( e2 );
-
+	
 	Entity e3;
-	e3.model = ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" );
-	e3.model->isStatic = false;
+	e3.model.SetRenderModel(ResourceManager::Get().GetModel( "res/models/gltf/imp/imp.gltf" ));
+	//e3.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/simple_skin.gltf" ));
+	e3.model.GetRenderModel()->isStatic = false;
+	//renderer->ComputeHierarchyR( nullptr, 0, &e3.model.GetRenderModel()->nodes[e3.model.GetRenderModel()->rootNode], glm::mat4( 1.0 ) );
+	e3.model.CalculateNodesR(&e3.model.GetRenderModel()->nodes[e3.model.GetRenderModel()->rootNode], glm::mat4(1.0));
+	e3.model.animator.SetAnimation( ResourceManager::Get().GetAnimation( "idle" ) );
 	//LoadAnimations("res/models/gltf/imp/anim/imp_run_forward.gltf");
 	entites.push_back( e3 );
-
+	
+	Entity e2;
+	e2.model.SetRenderModel(ResourceManager::Get().GetModel( "res/models/gltf/sponza/sponza.gltf" ));
+	e2.model.GetRenderModel()->isStatic = true;
+	renderer->ComputeHierarchyR( nullptr, 0, &e2.model.GetRenderModel()->nodes[e2.model.GetRenderModel()->rootNode], glm::mat4( 1.0 ) );
+	e2.model.CalculateNodesR( &e2.model.GetRenderModel()->nodes[e2.model.GetRenderModel()->rootNode], glm::mat4( 1.0 ) );
+	entites.push_back( e2 );
 
 	//Load Skybox
-	ResourceManager::Get().GetTexture( "res/textures/skybox/back.jpg" );
-	ResourceManager::Get().GetTexture( "res/textures/skybox/bottom.jpg" );
-	ResourceManager::Get().GetTexture( "res/textures/skybox/front.jpg" );
-	ResourceManager::Get().GetTexture( "res/textures/skybox/left.jpg" );
-	ResourceManager::Get().GetTexture( "res/textures/skybox/right.jpg" );
-	ResourceManager::Get().GetTexture( "res/textures/skybox/top.jpg" );
+	//ResourceManager::Get().GetTexture( "res/textures/skybox/back.jpg" );
+	//ResourceManager::Get().GetTexture( "res/textures/skybox/bottom.jpg" );
+	//ResourceManager::Get().GetTexture( "res/textures/skybox/front.jpg" );
+	//ResourceManager::Get().GetTexture( "res/textures/skybox/left.jpg" );
+	//ResourceManager::Get().GetTexture( "res/textures/skybox/right.jpg" );
+	//ResourceManager::Get().GetTexture( "res/textures/skybox/top.jpg" );
 
 	Light pointLight = {};
 	pointLight.lType = LIGHT_POINT;
@@ -85,8 +92,10 @@ void Common::Init() {
 	spot.hasShadow = true;
 	lights.push_back( spot );
 
-	camera.transform.SetRotation( glm::vec3( 0, 1, 0 ) );
+	//camera.transform.SetRotation( glm::vec3( 0, 1, 0 ) );
 
+	camera.transform.SetPosition( glm::vec3( -.6, 1, -4 ) );
+	camera.transform.SetRotation( glm::vec3( .001, -0.1, 1.0 ) );
 	lastTime = glfwGetTime();
 	tickRate = 1.0 / 60.0;
 	accum = 0.0;

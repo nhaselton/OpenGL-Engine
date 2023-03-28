@@ -153,6 +153,7 @@
     <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="src\Common.cpp" />
     <ClCompile Include="src\Entity.cpp" />
+    <ClCompile Include="src\EntModel.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\Input.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -170,6 +171,7 @@
     <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\Entity.hpp" />
+    <ClInclude Include="src\EntModel.h" />
     <ClInclude Include="src\Input.h" />
     <ClInclude Include="src\Light.h" />
     <ClInclude Include="src\Mesh.h" />

@@ -9,12 +9,11 @@ Window::Window() {
 
 }
 
-void Window::Init() {
+void Window::Init( unsigned int width, unsigned int height ) {
+    this->width = width;
+    this->height = height;
     if ( !glfwInit() )
         std::cout << "[ERROR] could not init glfw" << std::endl;
-
-    width = 1280;
-    height = 720;
 
     glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
     glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
@@ -28,17 +27,13 @@ void Window::Init() {
     }
     
     glfwMakeContextCurrent( handle );
-    //gladLoadGL();
 
     if ( !gladLoadGLLoader( ( GLADloadproc ) glfwGetProcAddress ) )
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
     }
-
-
+    
     glfwMakeContextCurrent( handle );
-
     glfwSwapInterval( 0 );
-
     glfwSetKeyCallback( handle, Input::KeyCallback );
 }

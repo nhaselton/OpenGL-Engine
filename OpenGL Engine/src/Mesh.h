@@ -33,6 +33,8 @@ public:
 	void			BindVAO();
 	void			BindEBO();
 
+	int				id; //todo remove ( debug )
+
 private:
 	Mesh( std::vector<glm::vec3> positions, std::vector<unsigned short> indices );
 };

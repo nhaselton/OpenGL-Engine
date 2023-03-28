@@ -1,40 +1,13 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include "Mesh.h"
-#include "Transform.h"
 #include <string>
 #include <vector>
 
-struct TranslationKeyFrame {
-	glm::vec3 translation;
-	float time;
-};
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
-struct RotationKeyFrame {
-	glm::quat rotaiton;
-	float time;
-};
-
-struct ScaleKeyFrame {
-	glm::vec3 scale;
-	float time;
-};
-
-
-struct AnimChannel{
-	int nodeID;	
-
-	std::vector<TranslationKeyFrame> translations;
-	std::vector<RotationKeyFrame> rotations;
-	std::vector<ScaleKeyFrame> scales;
-};
-
-struct Animation {
-	std::string name;
-	std::vector<AnimChannel> animChannels;
-};
-
+#include "Mesh.h"
+#include "Transform.h"
+#include "Animation.h"
 
 struct Node {
 	Node(){}

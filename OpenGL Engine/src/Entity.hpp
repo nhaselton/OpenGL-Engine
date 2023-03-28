@@ -1,7 +1,9 @@
 #pragma once
 #include "Model.h"
+#include "EntModel.h"
 #include "Transform.h"
 #include <glm/glm.hpp>
+
 class Entity {
 
 public:
@@ -11,5 +13,5 @@ public:
 	
 	//priviteize 
 	Transform transform;
-	Model* model;
+	EntModel model;
 };
