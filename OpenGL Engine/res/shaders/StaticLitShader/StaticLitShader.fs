@@ -38,6 +38,9 @@ uniform vec3 viewPos;
 uniform bool showNormalMap;
 uniform bool showSpecularMap;
 
+uniform bool showDirectional;
+uniform bool showSpot;
+uniform bool showPoint;
 
 
 in vec2 vTexCoords;
@@ -83,19 +86,23 @@ void main(){
 	//	3. spotLights
 
 	//Directional Light
-	//result += CalcDirectional( normal,specular );
-
+	if ( showDirectional ){
+		result += CalcDirectional( normal,specular );
+	}
 	//Point Lights
-	//for ( int i =0 ; i < numPointLights; i++ )
-	//	result += CalcPointLights(pointLights[i], normal, specular );
+	if ( showPoint ){
+		for ( int i =0 ; i < numPointLights; i++ )
+			result += CalcPointLights(pointLights[i], normal, specular );
+	}
 
 	//Spot Lights
+	if ( showSpot ) {
 	for ( int i =0; i < numSpotLights; i++ )
 		result += CalcSpotLights(spotLights[i], normal, specular, i );
-	result += vec3(.05f);//ambient
-	
-	result *= color;
+	}
 
+	result += vec3(.05f);//ambient
+	result *= color;
 	FragColor = vec4(result,1.0);
 }
 

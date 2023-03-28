@@ -55,9 +55,7 @@
             a) Update Every 1/60 & draw infinitly ( Done ) 
             b) interpolate & predict Camera ( Done ) 
         3) Consistent Window size ( Done )
-
-        Eventaully
-        1) each animated model has a vector of nodes so you can for loop all at beginning for multiple models , and not recursively draw every time     
+        4) Individual entity animations and non recursive draw ( Done ) 
    
    ======== GAME  ========
 

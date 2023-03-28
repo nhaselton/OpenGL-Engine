@@ -28,6 +28,11 @@ Renderer::Renderer() {
 	index = 0;
 	showNormalMap = true;
 	showSpecularMap = true;
+
+	showDirectional = true;
+	showSpot= true;
+	showPoint = true;
+
 }
 
 //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
@@ -145,6 +150,10 @@ void Renderer::BeginFrame() {
 	ImGui::Checkbox( "use NormalMap?", &showNormalMap );
 	ImGui::Checkbox( "use SpecularMap?", &showSpecularMap );
 	ImGui::Checkbox( "Show Shadow Atlas?", &showShadowAtlas );
+	ImGui::Checkbox( "Show Directional?", &showDirectional );
+	ImGui::Checkbox( "Show Spot?", &showSpot);
+	ImGui::Checkbox( "Show Point?", &showPoint );
+	
 	ImGui::End();
 
 	ImGui::Begin( "Camera info" );
@@ -152,6 +161,8 @@ void Renderer::BeginFrame() {
 	ImGui::Text( "Euler:  (%.1lf, %.1lf, %.1lf)", camera->transform.Rotation().x, camera->transform.Rotation().y, camera->transform.Rotation().z );
 	ImGui::Text( "Forward:  (%.1lf, %.1lf, %.1lf)", camera->GetForward().x, camera->GetForward().y, camera->GetForward().z );
 	ImGui::End();
+
+
 
 	ImGui::Begin( "Frame" );
 	ImGui::SliderInt( "frame", &index, 0, 31 );
@@ -202,13 +213,22 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	staticShader->SetMat4( "view", view );
 	staticShader->SetBool( "showNormalMap", showNormalMap );
 	staticShader->SetBool( "showSpecularMap", showSpecularMap );
+	
+	staticShader->SetBool( "showDirectional", showDirectional );
+	staticShader->SetBool( "showSpot", showSpot );
+	staticShader->SetBool( "showPoint", showPoint );
+
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 
 	dynamicShader->Use();
 	dynamicShader->SetMat4( "view", view );
 	dynamicShader->SetBool( "showNormalMap", showNormalMap );
 	dynamicShader->SetBool( "showSpecularMap", showSpecularMap );
+	dynamicShader->SetBool( "showDirectional", showDirectional );
+	dynamicShader->SetBool( "showSpot", showSpot );
+	dynamicShader->SetBool( "showPoint", showPoint );
 	dynamicShader->SetVec3( "viewPos", camera->transform.Position() );
+
 
 	for ( int i = 0; i < entities.size(); i++ ) {
 		Model* model = entities[i].model.GetRenderModel();

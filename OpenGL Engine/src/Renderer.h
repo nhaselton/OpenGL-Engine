@@ -70,6 +70,11 @@ private:
 	bool			showSpecularMap;
 	bool			showShadowAtlas;
 
+	bool			showDirectional;
+	bool			showSpot;
+	bool			showPoint;
+
+
 	// (8192 * 8192) / (512 * 512) bit representation of shadowAltas
 	unsigned int*	shadowAtlasContents;
 	
