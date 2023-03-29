@@ -46,6 +46,7 @@ private:
 	Shader*			dynamicShadowShader;
 	Shader*			debugDepthQuadShader;
 	Shader*			skyboxShader;	
+	Shader*			boundingBoxShader;
 
 	class Window*	window;
 	Camera*			camera;
@@ -73,7 +74,7 @@ private:
 	bool			showDirectional;
 	bool			showSpot;
 	bool			showPoint;
-
+	bool			fullBright;	
 
 	// (8192 * 8192) / (512 * 512) bit representation of shadowAltas
 	unsigned int*	shadowAtlasContents;
@@ -93,9 +94,10 @@ public:
 	void			DebugPrintShadowAtlas();
 	//returns UV coords of texture atlas slot
 	AtlasLocation	FindFreeSpaceInShadowAltas( shadowMapType type, int shadowWidth, int shadowHeight );
-	void			ComputeHierarchyR( Animation* animation, float time, Node* node, glm::mat4 parent = glm::mat4( 1.0 ) );
 	void			DrawScene( Shader* staticShader, Shader* dynamicShader, bool drawTextures, std::vector<Entity>& entities );
 	SkyBox			CreateSkyBox(const char* paths[6]);
 	void			DrawSkyBox();
 	void			DrawEntity(Shader* shader, Entity ent,bool shouldTexture);
+	void			DrawLights( std::vector<Light>& lights, std::vector<Entity>& entities );
+	void			DrawOBB(Entity& entity);
 };

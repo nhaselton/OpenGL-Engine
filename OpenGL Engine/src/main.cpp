@@ -41,6 +41,7 @@
              c) spot ( Done )
         16) Animated shadow casted Imp inside of sponza ( Done ) 
         13) Skybox ( Done ) 
+        14) add lightmap size as light param, calcshadow uses 1/1024 for texel size, not 1/lightmapsize
         14) Animation Interpolation
         15) lights only update when changed
         16) shadow atlas only updates on change 

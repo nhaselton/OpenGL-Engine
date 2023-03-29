@@ -10,6 +10,9 @@ public:
 	void				Init();
 	void				Frame();
 	void				UpdateInput();
+
+	void				InitGraphicsScene();
+	void				InitPhysicsScene();
 private:
 	Camera				camera;
 

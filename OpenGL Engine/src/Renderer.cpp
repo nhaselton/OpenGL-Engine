@@ -33,6 +33,7 @@ Renderer::Renderer() {
 	showSpot= true;
 	showPoint = true;
 
+	fullBright = true;
 }
 
 //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
@@ -50,6 +51,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	staticDepthPrepassShader = new Shader( "res/shaders/staticdepthpass" );
 	dynamicShadowShader = new Shader( "res/shaders/DynamicShadowShader" );
 	skyboxShader = new Shader( "res/shaders/skyboxShader" );
+	boundingBoxShader = new Shader( "res/shaders/boundingboxshader" );
 
 
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
@@ -153,6 +155,7 @@ void Renderer::BeginFrame() {
 	ImGui::Checkbox( "Show Directional?", &showDirectional );
 	ImGui::Checkbox( "Show Spot?", &showSpot);
 	ImGui::Checkbox( "Show Point?", &showPoint );
+	ImGui::Checkbox( "Show Fullbright?", &fullBright );
 	
 	ImGui::End();
 
@@ -173,8 +176,14 @@ void Renderer::BeginFrame() {
 #include "Input.h"
 
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights, double interp ) {
-	entities[0].model.animator.currentFrame = index;
-	entities[0].model.CalculateNodesR( &entities[0].model.GetRenderModel()->nodes[entities[0].model.GetRenderModel()->rootNode], glm::mat4( 1.0 ) );
+	//Update Skeletal Animation
+	for ( int i = 0; i < entities.size(); i++ ) {
+		if ( entities[i].model.animator.animation != nullptr ) {
+			entities[i].model.animator.currentFrame = index;
+			entities[i].model.CalculateNodesR( &entities[0].model.GetRenderModel()->nodes[entities[0].model.GetRenderModel()->rootNode], glm::mat4( 1.0 ) );
+		}
+	}
+
 
 	//for some reason this gets unbound
 	glActiveTexture( GL_TEXTURE15 );
@@ -183,9 +192,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glBindFramebuffer( GL_FRAMEBUFFER, shadowAtlasFBO );
 	glClear( GL_DEPTH_BUFFER_BIT );
 
-	DrawPointLight( lights[0], entities );
-	DrawDirectionalLight( lights[1], entities );
-	DrawSpotLight( lights[2], entities );
+	DrawLights(lights,entities);
 
 	glm::mat4 view = camera->GetInterpolatedView( interp );
 
@@ -217,6 +224,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	staticShader->SetBool( "showDirectional", showDirectional );
 	staticShader->SetBool( "showSpot", showSpot );
 	staticShader->SetBool( "showPoint", showPoint );
+	staticShader->SetBool( "fullBright", fullBright );
 
 	staticShader->SetVec3( "viewPos", camera->transform.Position() );
 
@@ -225,6 +233,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	dynamicShader->SetBool( "showNormalMap", showNormalMap );
 	dynamicShader->SetBool( "showSpecularMap", showSpecularMap );
 	dynamicShader->SetBool( "showDirectional", showDirectional );
+	dynamicShader->SetBool( "fullBright", fullBright);
 	dynamicShader->SetBool( "showSpot", showSpot );
 	dynamicShader->SetBool( "showPoint", showPoint );
 	dynamicShader->SetVec3( "viewPos", camera->transform.Position() );
@@ -242,10 +251,14 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	}
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
-		lights[2].pos = camera->transform.Position();
-		lights[2].direction = camera->GetForward();
+		if ( lights.size() >= 2 ) {
+			lights[2].pos = camera->transform.Position();
+			lights[2].direction = camera->GetForward();
+		}
 	}
-	//DrawSkyBox();
+
+	DrawOBB( entities[0] );
+
 }
 
 void Renderer::DrawSkyBox() {
@@ -262,6 +275,24 @@ void Renderer::DrawSkyBox() {
 	glDrawArrays( GL_TRIANGLES, 0, 36 );
 	glDepthMask( GL_TRUE );
 	glDepthFunc( GL_LESS );
+}
+
+void Renderer::DrawLights(std::vector<Light>& lights, std::vector<Entity>& entities) {
+	for ( int i = 0; i < lights.size(); i++ ) {
+		switch ( lights[i].lType ) {
+		case LIGHT_POINT:
+			DrawPointLight( lights[i], entities );
+			break;
+		case LIGHT_DIRECTIONAL:
+			DrawDirectionalLight( lights[i], entities );
+			break;
+		case LIGHT_SPOT:
+			DrawSpotLight( lights[2], entities );
+			break;
+		default:
+			std::cout << "TRYING TO DRAW A NON EXISTANT LIGHT TYPE" << std::endl;
+		}
+	}
 }
 
 //wonder if i could figure out how to do this with 1 viewport, find start pos, then i could get bounds and maybe draw correctly
@@ -655,27 +686,24 @@ void Renderer::renderQuad() {
 	glBindVertexArray( 0 );
 }
 
-void Renderer::ComputeHierarchyR( Animation* animation, float time, Node* node, glm::mat4 parent ) {
-	node->computedOffset = node->t.Matrix();//animation offset
-	if ( animation ) {
-		for ( int i = 0; i < animation->animChannels.size(); i++ ) {
-			AnimChannel* anim = &animation->animChannels[i];
-			if ( anim->nodeID == node->index && anim->rotations.size() > 0 ) {
-				Transform t;
-				t.SetRotation( glm::eulerAngles( glm::quat( anim->rotations[index].rotaiton ) ) );
-				t.SetPosition( anim->translations[index].translation );
-				t.SetScale( anim->scales[index].scale );
-				node->computedOffset = t.Matrix();
-
-				if ( node->name == "origin" )
-					node->computedOffset = node->t.Matrix();
-			}
-		}
-	}
-
-
-	for ( int i = 0; i < node->children.size(); i++ )
-		ComputeHierarchyR( animation, index, node->children[i], node->computedOffset );
+void Renderer::DrawOBB( Entity& entity ) {
+	Model* model = ResourceManager::Get().GetModel( "res/models/gltf/cube.gltf" );
+	// model origin is top left, subtract size to get the top left of OOB
+	glm::mat4 translation = glm::translate( glm::mat4(1.0), entity.boundingBox.center - entity.boundingBox.e );
+	glm::mat4 rot = entity.boundingBox.u;
+	glm::mat4 scale = glm::scale(glm::mat4(1.0), entity.boundingBox.e * 2.0f);
+	glm::mat4 modelT = translation * rot * scale;
+	model->meshes[0].BindVAO();
+	
+	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+	glDepthFunc( GL_LEQUAL );
+	boundingBoxShader->Use();
+	boundingBoxShader->SetMat4( "model", modelT );
+	boundingBoxShader->SetMat4( "projection", projection );
+	boundingBoxShader->SetMat4( "view", camera->GetView() );
+	glDrawElements( GL_TRIANGLES, model->meshes[0].numIndices, GL_UNSIGNED_SHORT, 0 );
+	glDepthFunc( GL_LESS );
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
 
 
@@ -689,7 +717,7 @@ void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
 			shader->SetMat4( "bones[" + std::to_string( node->boneID ) + "]", ent.model.nodeData[node->index].boneData );
 		
 		
-		shader->SetMat4("model", node->t.Matrix());
+		shader->SetMat4("model", ent.transform.Matrix() *  node->t.Matrix());
 	
 		for ( int n = 0; n < node->meshIndices.size(); n++ ) {
 			Mesh* mesh = &renderModel->meshes[node->meshIndices[n]];

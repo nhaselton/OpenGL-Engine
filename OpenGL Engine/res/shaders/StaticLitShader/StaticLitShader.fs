@@ -41,7 +41,7 @@ uniform bool showSpecularMap;
 uniform bool showDirectional;
 uniform bool showSpot;
 uniform bool showPoint;
-
+uniform bool fullBright;
 
 in vec2 vTexCoords;
 in vec3 vNormal;
@@ -60,6 +60,8 @@ float CalcPointLightShadows(Light light);
 
 
 void main(){
+
+
 	vec3 normal;
 	float specular;
 
@@ -78,6 +80,12 @@ void main(){
 	}
 
 	vec3 color = texture(albedo,vTexCoords).rgb;
+
+	if ( fullBright){
+		FragColor = vec4(color,1.0);
+		return;
+	}
+
 
 	vec3 result = vec3(0);
 	//Setup) 
@@ -217,7 +225,7 @@ float CalcPointLightShadows(Light light){
 	float bias = .05;
 	float sampleShadow = 0.0;
 	//seems to work with texture atlas size not defualt map size, wonder if its suppose to do that
-	vec2 texelSize = vec2(1.0 / 8096);//textureSize(shadowMap, 0);
+	vec2 texelSize = vec2(1.0 / 1024.0);//textureSize(shadowMap, 0);
 
 	for(int x = -1; x <= 1; x++) {
 		for(int y = -1; y <= 1; y++) {
@@ -256,7 +264,7 @@ float CalcShadow(vec4 fragLightSpace, Light light){
 	float bias = .05;
 	float sampleShadow = 0.0;
 	//seems to work with texture atlas size not defualt map size, wonder if its suppose to do that
-	vec2 texelSize = vec2(1.0 / 8096);//textureSize(shadowMap, 0);
+	vec2 texelSize = vec2(1.0 / 1024.0);//textureSize(shadowMap, 0);
 	
 	
 	for(int x = -1; x <= 1; x++) {

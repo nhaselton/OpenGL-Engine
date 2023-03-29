@@ -1,9 +1,9 @@
 #pragma once
+#include <glm/glm.hpp>
 #include "Model.h"
 #include "EntModel.h"
 #include "Transform.h"
-#include <glm/glm.hpp>
-
+#include "OBB.h" 
 class Entity {
 
 public:
@@ -12,6 +12,7 @@ public:
 	Entity(Transform t);
 	
 	//priviteize 
-	Transform transform;
-	EntModel model;
+	Transform	transform;
+	EntModel	model;
+	OBB			boundingBox;
 };
