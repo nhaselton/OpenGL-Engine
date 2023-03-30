@@ -16,7 +16,7 @@
 #include "Input.h"
 #include "Tools.h"
 #include "OBB.h"
-
+#include "Collisions.h"
 Common::Common() {
 	width = 1280;
 	height = 720;
@@ -42,7 +42,6 @@ void Common::Init() {
 }
 
 
-
 void Common::Frame() {
 
 	while ( !glfwWindowShouldClose( window->GetHandle() ) ) {
@@ -54,7 +53,17 @@ void Common::Frame() {
 			glfwPollEvents();
 			UpdateInput();
 			accum -= tickRate;
+
+			if ( TestOBBOBB( entites[0].boundingBox, entites[1].boundingBox ) )
+				std::cout << "COLLIDE" << std::endl;
+			
+			for ( int i = 0; i < entites.size(); i++ ) {
+					entites[i].transform.SetPosition( entites[i].transform.Position() + entites[i].transform.Velocity() );
+					entites[i].boundingBox.center = entites[i].transform.Position();
+			}
 		}
+		
+
 		float interp = ( float ) ( accum / tickRate );
 		renderer->BeginFrame();
 		renderer->DrawFrame( entites, lights, interp );
@@ -62,9 +71,10 @@ void Common::Frame() {
 		
 		lastTime = now;
 	}
+
+
 }
 
-//TODO
 void Common::UpdateInput() {
 	if ( Input::keys[GLFW_KEY_ESCAPE] ) {
 		exit( 0 );
@@ -72,6 +82,7 @@ void Common::UpdateInput() {
 
 	camera.transform.SetVelocity( glm::vec3(0) );
 	camera.transform.SetRotationalVelocity( glm::vec3(0) );
+
 
 		
 	if ( Input::keys[GLFW_KEY_W] ) {
@@ -85,11 +96,15 @@ void Common::UpdateInput() {
 	if ( Input::keys[GLFW_KEY_A] ) {
 		camera.transform.AddVelocity( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
 	}
-
 	if ( Input::keys[GLFW_KEY_D] ) {
 		camera.transform.AddVelocity( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
 	}
 	
+	if ( Input::keys[GLFW_KEY_T] ) {
+		entites[0].transform.Translate( glm::vec3(.25f, 0, 0) );
+		entites[0].boundingBox.center = entites[0].transform.Position();
+	}
+
 	if ( Input::keys[GLFW_KEY_LEFT] ) {
 		camera.transform.AddRotationalVelocity( glm::vec3( 0, -.5f, 0.0f ) * glm::vec3( .1f ) );
 	}
@@ -110,7 +125,7 @@ void Common::UpdateInput() {
 
 void Common::InitPhysicsScene() {
 	camera.transform.SetPosition( glm::vec3( 0, 0, -5 ) );
-	camera.transform.SetRotation( glm::vec3( 0 ) );
+	camera.transform.SetRotation( glm::vec3( 0 , glm::radians(90.f) , 0) );
 
 	//Box
 	Entity box;
@@ -118,17 +133,29 @@ void Common::InitPhysicsScene() {
 	box.transform.SetPosition( glm::vec3( 0, 0, 0 ) );
 
 	OBB obb;
-	obb.center = glm::vec3( .5 );
+	obb.center = glm::vec3( box.transform.Position() );
 	obb.u = glm::mat3( 1.0 );
-	obb.e = glm::vec3( 0.5f, 0.5f, 0.5f );
+	float t = glm::radians( 45.0f );
+	obb.u[0] = glm::vec3( -sinf( t ), cosf( t ), 0 );
+	obb.u[1] = glm::vec3( cos( t ), sinf( t ), 0 );
+
+	obb.e = glm::vec3( 1.0f );
+	box.boundingBox = obb;
+
 	entites.push_back( box );
 	
 	//Monkey
 	Entity monkey;
 	monkey.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/monkey.gltf" ) );
 	monkey.transform.SetPosition( glm::vec3( 5, 0, 0 ) );
+	
+	OBB obb2;
+	obb2.center = glm::vec3( monkey.transform.Position() );
+	obb2.u = glm::mat3( 1.0 );
+	obb2.e = glm::vec3( 1.0f );
+	monkey.boundingBox = obb2;
+	monkey.transform.SetVelocity(glm::vec3(0));
 	entites.push_back( monkey );
-
 }
 
 void Common::InitGraphicsScene() {

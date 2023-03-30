@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClCompile Include="src\Animation.cpp" />
     <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\Collisions.cpp" />
     <ClCompile Include="src\Common.cpp" />
     <ClCompile Include="src\Entity.cpp" />
     <ClCompile Include="src\EntModel.cpp" />
@@ -169,6 +170,7 @@
   <ItemGroup>
     <ClInclude Include="src\Animation.h" />
     <ClInclude Include="src\Camera.h" />
+    <ClInclude Include="src\Collisions.h" />
     <ClInclude Include="src\Common.h" />
     <ClInclude Include="src\Entity.hpp" />
     <ClInclude Include="src\EntModel.h" />

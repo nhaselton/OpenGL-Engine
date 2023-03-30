@@ -13,6 +13,11 @@
 
 /* TODO LIST BY THE TIME I DIE */
 /*
+* doing now
+* Engine: SAT
+* do next
+* Render: DRAW LINES
+* 
    ====     RENDERING       ======  
          1) Textures (Done)
          2) Lighting (Done)
@@ -41,13 +46,14 @@
              c) spot ( Done )
         16) Animated shadow casted Imp inside of sponza ( Done ) 
         13) Skybox ( Done ) 
-        14) add lightmap size as light param, calcshadow uses 1/1024 for texel size, not 1/lightmapsize
-        14) Animation Interpolation
-        15) lights only update when changed
-        16) shadow atlas only updates on change 
+        14) Draw Lines
+        15) add lightmap size as light param, calcshadow uses 1/1024 for texel size, not 1/lightmapsize
+        16) Animation Interpolation
+        17) lights only update when changed
+        18) shadow atlas only updates on change 
         Eventually
-        Log draw calls
-        Uber Shaders
+         Log draw calls
+         Uber Shaders
          Frustum Culling
          Light "Frustum" Culling
    ======== ENGINE ========
@@ -57,7 +63,12 @@
             b) interpolate & predict Camera ( Done ) 
         3) Consistent Window size ( Done )
         4) Individual entity animations and non recursive draw ( Done ) 
-   
+        5) basic SAT
+            Collision check
+            Collison info ( penetration depth, normal )
+        Eventually
+         Broad Phase Checking
+         BSP
    ======== GAME  ========
 
    */

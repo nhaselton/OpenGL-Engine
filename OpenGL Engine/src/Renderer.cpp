@@ -256,8 +256,8 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 			lights[2].direction = camera->GetForward();
 		}
 	}
-
-	DrawOBB( entities[0] );
+	for ( int i = 0 ;i < entities.size(); i++ )
+		DrawOBB( entities[i] );
 
 }
 
@@ -688,10 +688,9 @@ void Renderer::renderQuad() {
 
 void Renderer::DrawOBB( Entity& entity ) {
 	Model* model = ResourceManager::Get().GetModel( "res/models/gltf/cube.gltf" );
-	// model origin is top left, subtract size to get the top left of OOB
-	glm::mat4 translation = glm::translate( glm::mat4(1.0), entity.boundingBox.center - entity.boundingBox.e );
+	glm::mat4 translation = glm::translate( glm::mat4(1.0), entity.boundingBox.center );
 	glm::mat4 rot = entity.boundingBox.u;
-	glm::mat4 scale = glm::scale(glm::mat4(1.0), entity.boundingBox.e * 2.0f);
+	glm::mat4 scale = glm::scale(glm::mat4(1.0), entity.boundingBox.e );
 	glm::mat4 modelT = translation * rot * scale;
 	model->meshes[0].BindVAO();
 	
