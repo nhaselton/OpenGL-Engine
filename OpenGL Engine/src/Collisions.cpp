@@ -1,6 +1,9 @@
 #pragma once
 #include "OBB.h"
+#include "Collisions.h"
 #include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 
 static float clampf( float f, float a, float b ) {
@@ -129,7 +132,7 @@ bool TestOBBOBB( OBB& a, OBB& b ) {
 	glm::vec3 t = b.center - a.center;
 	//translate into A's coord frame
 	t = glm::vec3( glm::dot( t, a.u[0] ), glm::dot( t,a.u[1] ), glm::dot( t, a.u[2] ) );
-
+	
 	//Compute common sub expressions, add epsilon to ged rid of NULL cross products on parallel lines
 	for ( int i = 0; i < 3 ; i++ )
 		for ( int j = 0; j < 3; j++ ) {
@@ -186,5 +189,38 @@ bool TestOBBOBB( OBB& a, OBB& b ) {
 	rb = b.e[0] * absR[2][1] + b.e[1] * absR[2][0];
 	if ( fabs( t[1] * R[0][2] - t[0] * R[1][2] ) > ra + rb ) return false;
 	return true;
+
+
+}
+
+//Test OBB and give back hit info
+bool TestOBBOBB2( OBB& a, OBB& b , HitInfo& h) {
+	float minDepth = 0.0f;
+	glm::vec3 depthNormal = glm::vec3( 0 );
+
+	glm::vec3* aAxes = a.GetAxes();
+	glm::vec3* bAxes = b.GetAxes();
+
+	glm::vec3 allAxes[] = {
+			aAxes[0],
+			aAxes[1],
+			aAxes[2],
+			bAxes[0],
+			bAxes[1],
+			bAxes[2],
+			glm::cross( aAxes[0], bAxes[0] ),
+			glm::cross( aAxes[0], bAxes[1] ),
+			glm::cross( aAxes[0], bAxes[2] ),
+			glm::cross( aAxes[1], bAxes[0] ),
+			glm::cross( aAxes[1], bAxes[1] ),
+			glm::cross( aAxes[1], bAxes[2] ),
+			glm::cross( aAxes[2], bAxes[0] ),
+			glm::cross( aAxes[2], bAxes[1] ),
+			glm::cross( aAxes[2], bAxes[2] )
+	};
+
+	glm::vec3* aVerts = a.GetVertices();
+	glm::vec3* bVerts = b.GetVertices();
+
 
 }
