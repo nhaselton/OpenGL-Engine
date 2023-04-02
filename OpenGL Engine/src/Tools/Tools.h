@@ -1,7 +1,7 @@
 #pragma once
-#include "Mesh.h"
-#include "Model.h"
-#include "Texture.h"
+#include "../renderer/Mesh.h"
+#include "../renderer/Model.h"
+#include "../renderer/Texture.h"
 
 Model			LoadStaticModelGLTF( const char* path );
 void			LoadAnimations( const char* path );

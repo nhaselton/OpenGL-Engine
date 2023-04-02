@@ -1,9 +1,9 @@
 #pragma once
-#include "Mesh.h"
-#include "Entity.hpp"
-#include "Camera.h"
-#include "Texture.h"
-#include "Light.h"
+#include "../Renderer/Mesh.h"
+#include "../core/Entity.hpp"
+#include "../core/Camera.h"
+#include "../renderer/Texture.h"
+#include "../renderer/Light.h"
 class Common {
 public:
 	Common();

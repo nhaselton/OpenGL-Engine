@@ -1,8 +1,8 @@
 #pragma once
-#include "Mesh.h"
-#include "Model.h"
-#include "Texture.h"
-#include "Animation.h"
+#include "../renderer/Mesh.h"
+#include "../renderer/Model.h"
+#include "../renderer/Texture.h"
+#include "../renderer/Animation.h"
 #include <string>
 #include <map>
 #include <iostream>

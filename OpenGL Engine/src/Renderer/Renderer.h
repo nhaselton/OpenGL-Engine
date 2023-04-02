@@ -1,9 +1,9 @@
 #pragma once
-#include "Entity.hpp"
+#include "../Core/Entity.hpp"
 #include <vector>
 #include "Mesh.h"
 #include "Model.h"
-#include "Camera.h"
+#include "../Core/Camera.h"
 #include "Light.h"
 
 enum shadowMapType {

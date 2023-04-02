@@ -1,9 +1,9 @@
 #pragma once
 #include <glm/glm.hpp>
-#include "Model.h"
-#include "EntModel.h"
+#include "../Renderer/Model.h"
+#include "../Renderer/EntModel.h"
 #include "Transform.h"
-#include "OBB.h" 
+#include "../Physics/OBB.h" 
 class Entity {
 
 public:

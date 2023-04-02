@@ -5,10 +5,11 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/string_cast.hpp"
-#include "Window.h"
+#include "../Framework/Window.h"
 #include "Shader.h"
-#include "ResourceManager.h" 
-#include "Tools.h"
+#include "../Framework/ResourceManager.h" 
+#include "../Tools/Tools.h"
+#include "../Framework/Input.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
@@ -171,8 +172,6 @@ void Renderer::BeginFrame() {
 	ImGui::End();
 
 }
-
-#include "Input.h"
 
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights, double interp ) {
 	ImGui::Begin( "test" );

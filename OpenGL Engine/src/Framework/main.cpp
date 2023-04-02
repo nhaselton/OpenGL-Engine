@@ -5,8 +5,8 @@
 #include "Common.h"
 #include "Window.h"
 
-#include "Shader.h"
-#include "Mesh.h"
+#include "../renderer/Shader.h"
+#include "../renderer/Mesh.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

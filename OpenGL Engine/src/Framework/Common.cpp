@@ -11,12 +11,12 @@
 #include "ResourceManager.h"
 #include "Common.h"
 #include "Window.h"
-#include "Renderer.h"
-#include "Mesh.h"
+#include "../renderer/Renderer.h"
+#include "../renderer/Mesh.h"
 #include "Input.h"
-#include "Tools.h"
-#include "OBB.h"
-#include "Collisions.h"
+#include "../tools/Tools.h"
+#include "../physics/OBB.h"
+#include "../physics/Collisions.h"
 Common::Common() {
 	width = 1280;
 	height = 720;

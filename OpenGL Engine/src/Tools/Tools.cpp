@@ -11,8 +11,8 @@
 #include <glm/gtx/string_cast.hpp>
 
 
-#include "ResourceManager.h"
-#include "Texture.h"
+#include "../Framework/ResourceManager.h"
+#include "../Renderer/Texture.h"
 typedef nlohmann::json JSON;
 
 enum GLTF_TYPE {
