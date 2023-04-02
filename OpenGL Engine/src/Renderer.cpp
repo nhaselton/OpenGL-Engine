@@ -166,7 +166,6 @@ void Renderer::BeginFrame() {
 	ImGui::End();
 
 
-
 	ImGui::Begin( "Frame" );
 	ImGui::SliderInt( "frame", &index, 0, 31 );
 	ImGui::End();
@@ -176,6 +175,9 @@ void Renderer::BeginFrame() {
 #include "Input.h"
 
 void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights, double interp ) {
+	ImGui::Begin( "test" );
+	ImGui::SliderFloat3( "pos", &entities[0].transform.position.x, -5, 5);
+	ImGui::End();
 	//Update Skeletal Animation
 	for ( int i = 0; i < entities.size(); i++ ) {
 		if ( entities[i].model.animator.animation != nullptr ) {
@@ -694,6 +696,7 @@ void Renderer::DrawOBB( Entity& entity ) {
 	glm::mat4 modelT = translation * rot * scale;
 	model->meshes[0].BindVAO();
 	
+	
 	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	glDepthFunc( GL_LEQUAL );
 	boundingBoxShader->Use();
@@ -726,7 +729,7 @@ void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
 				BindTextures( mesh );
 
 			if ( mesh->numIndices != 0 ) {
-				glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
+				//glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
 			}
 			else {
 				glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );

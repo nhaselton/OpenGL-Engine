@@ -4,6 +4,10 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <vector>
+
+std::vector<glm::vec3> penetrationAxes;
+std::vector<float> penetrationAxesDistance;
 
 
 static float clampf( float f, float a, float b ) {
@@ -16,15 +20,15 @@ static float clampf( float f, float a, float b ) {
 
 glm::vec3 ClosestPtToOBB( glm::vec3 p, OBB& b ) {
 	glm::vec3 d = p - b.center;
-	
+
 	//result starts at center of box, then moves from there
 	glm::vec3 q = b.center;
-	
+
 	//for each axis
 	for ( int i = 0; i < 3; i++ ) {
 		//project D to axis and get distance
 		float dist = glm::dot( d, b.u[i] );
-		
+
 		//clamp dist to box
 		if ( dist > b.e[i] ) dist = b.e[i];
 		if ( dist < -b.e[i] ) dist = -b.e[i];
@@ -73,11 +77,10 @@ float ClosestPointSegmentSegmentSquared( glm::vec3 p1, glm::vec3 q1, glm::vec3 p
 			t = 0.0f;
 			s = clampf( -c / a, 0.0f, 1.0f );
 		}//neither do
-		else
-		{
+		else {
 			float b = glm::dot( d1, d2 );
 			float denom = a * e - b * b;
-			
+
 			//if segments are not parallel
 			if ( denom != 0.0f ) {
 				s = clampf( ( b * f - c * e ) / denom, 0.0f, 1.0f );
@@ -118,109 +121,149 @@ float ClosestPointSegmentSegmentSquared( glm::vec3 p1, glm::vec3 q1, glm::vec3 p
 */
 
 //pg 102
-bool TestOBBOBB( OBB& a, OBB& b ) {
+
+//instead of exiting early
+// the axis with the least normalized overlap can be used as the contact normal 
+//and the overlap can be used to estimate the penetration depth
+
+
+//if by some miracle this works, i could just record the index of axes + calced depth and only do cross/ axes at the end for 11 less calulations
+bool TestOBBOBB( OBB& a, OBB& b, HitInfo& h ) {
 	float ra;
 	float rb;
-	glm::mat3 R(1.0f), absR(1.0f);
-	
+	float _t;
+	glm::vec3 axes[15];
+	float depths[15];
+	glm::mat3 R( 1.0f ), absR( 1.0f );
+
 	//compute the rotation matrix expressing b in a's coordinate space
 	for ( int i = 0; i < 3; i++ )
-		for ( int j = 0; j < 3; j++ ) 
+		for ( int j = 0; j < 3; j++ )
 			R[i][j] = glm::dot( a.u[i], b.u[j] );
-	
+
 	//translaiton vector
 	glm::vec3 t = b.center - a.center;
 	//translate into A's coord frame
-	t = glm::vec3( glm::dot( t, a.u[0] ), glm::dot( t,a.u[1] ), glm::dot( t, a.u[2] ) );
-	
+	t = glm::vec3( glm::dot( t, a.u[0] ), glm::dot( t, a.u[1] ), glm::dot( t, a.u[2] ) );
+
 	//Compute common sub expressions, add epsilon to ged rid of NULL cross products on parallel lines
-	for ( int i = 0; i < 3 ; i++ )
+	for ( int i = 0; i < 3; i++ )
 		for ( int j = 0; j < 3; j++ ) {
 			absR[i][j] = fabs( R[i][j] ) + FLT_EPSILON;
 		}
 
+#define DEPTH  ra + rb - fabs(_t)//ra + rb - _t
+
+
 	// Test axes L = A0, L = A1, L = A2
 	for ( int i = 0; i < 3; i++ ) {
 		ra = a.e[i];
-		rb = b.e[0] * absR[i][0] + b.e[1] * absR[i][1] + b.e[2] * absR[i][2];
+		float rb = b.e[0] * absR[i][0] + b.e[1] * absR[i][1] + b.e[2] * absR[i][2];
+
 		if ( fabs( t[i] ) > ra + rb ) return false;
+		
+		axes[i] = a.u[i];
+		depths[i] = ra + rb - fabs(t[i]);//fabs(t[i]) - (ra + rb);//ra + rb - t[i];
 	}
+
+
 	// Test axes L = B0, L = B1, L = B2
 	for ( int i = 0; i < 3; i++ ) {
 		ra = a.e[0] * absR[0][i] + a.e[1] * absR[1][i] + a.e[2] * absR[2][i];
 		rb = b.e[i];
-		if ( fabs( t[0] * R[0][i] + t[1] * R[1][i] + t[2] * R[2][i] ) > ra + rb ) return false;
+		float _t = t[0] * R[0][i] + t[1] * R[1][i] + t[2] * R[2][i];
+		if ( fabs( _t ) > ra + rb ) return false;
+		
+		axes[i + 3] = b.u[i];
+		depths[i+3] = DEPTH;//ra + rb - t[i];
 	}
 
 	// L = A0 x B0
 	ra = a.e[1] * absR[2][0] + a.e[2] * absR[1][0];
 	rb = b.e[1] * absR[0][2] + b.e[2] * absR[0][1];
-	if ( fabs( t[2] * R[1][0] - t[1] * R[2][0] ) > ra + rb ) return false;
+	_t = t[2] * R[1][0] - t[1] * R[2][0];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[6] = glm::cross( a.u[0], b.u[0] );
+	depths[6] = DEPTH;
+	
 	// L = A0 x B1
 	ra = a.e[1] * absR[2][1] + a.e[2] * absR[1][1];
 	rb = b.e[0] * absR[0][2] + b.e[2] * absR[0][0];
-	if ( fabs( t[2] * R[1][1] - t[1] * R[2][1] ) > ra + rb ) return false;
+	_t = t[2] * R[1][1] - t[1] * R[2][1];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[7] = glm::cross( a.u[0], b.u[1] );
+	depths[7] = DEPTH;
 	// L = A0 x B2
 	ra = a.e[1] * absR[2][2] + a.e[2] * absR[1][2];
 	rb = b.e[0] * absR[0][1] + b.e[1] * absR[0][0];
-	if ( fabs( t[2] * R[1][2] - t[1] * R[2][2] ) > ra + rb ) return false;
+	_t = t[2] * R[1][2] - t[1] * R[2][2];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[8] = glm::cross( a.u[0], b.u[2] );
+	depths[8] = DEPTH;
 	// L = A1 x B0
 	ra = a.e[0] * absR[2][0] + a.e[2] * absR[0][0];
 	rb = b.e[1] * absR[1][2] + b.e[2] * absR[1][1];
-	if ( fabs( t[0] * R[2][0] - t[2] * R[0][0] ) > ra + rb ) return false;
+	_t = t[0] * R[2][0] - t[2] * R[0][0];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[9] = glm::cross( a.u[1], b.u[0] );
+	depths[9] = DEPTH;
 	// L = A1 x B1
 	ra = a.e[0] * absR[2][1] + a.e[2] * absR[0][1];
 	rb = b.e[0] * absR[1][2] + b.e[2] * absR[1][0];
-	if ( fabs( t[0] * R[2][1] - t[2] * R[0][1] ) > ra + rb ) return false;
+	_t = t[0] * R[2][1] - t[2] * R[0][1];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[10] = glm::cross( a.u[1], b.u[1] );
+	depths[10] = DEPTH;
 	// L = A1 x B2
 	ra = a.e[0] * absR[2][2] + a.e[2] * absR[0][2];
 	rb = b.e[0] * absR[1][1] + b.e[1] * absR[1][0];
-	if ( fabs( t[0] * R[2][2] - t[2] * R[0][2] ) > ra + rb ) return false;
+	_t  = t[0] * R[2][2] - t[2] * R[0][2];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[11] = glm::cross( a.u[1], b.u[2] );
+	depths[11] = DEPTH;
 	// L = A2 x B0
 	ra = a.e[0] * absR[1][0] + a.e[1] * absR[0][0];
 	rb = b.e[1] * absR[2][2] + b.e[2] * absR[2][1];
-	if ( fabs( t[1] * R[0][0] - t[0] * R[1][0] ) > ra + rb ) return false;
+	_t = t[1] * R[0][0] - t[0] * R[1][0];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[12] = glm::cross( a.u[2], b.u[0] );
+	depths[12] = DEPTH;
 	// L = A2 x B1
 	ra = a.e[0] * absR[1][1] + a.e[1] * absR[0][1];
 	rb = b.e[0] * absR[2][2] + b.e[2] * absR[2][0];
-	if ( fabs( t[1] * R[0][1] - t[0] * R[1][1] ) > ra + rb ) return false;
-	// L = A2 x B2
+	_t = t[1] * R[0][1] - t[0] * R[1][1];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[13] = glm::cross( a.u[2], b.u[1] );
+	depths[13] = DEPTH;// L = A2 x B2
 	ra = a.e[0] * absR[1][2] + a.e[1] * absR[0][2];
 	rb = b.e[0] * absR[2][1] + b.e[1] * absR[2][0];
-	if ( fabs( t[1] * R[0][2] - t[0] * R[1][2] ) > ra + rb ) return false;
+	_t = t[1] * R[0][2] - t[0] * R[1][2];
+	if ( fabs( _t ) > ra + rb ) return false;
+	axes[14] = glm::cross( a.u[2], b.u[2] );
+	depths[14] = DEPTH; 
+
+
+#if 1//Print
+	std::cout << "\n";
+	for ( int i = 0; i < 15; i++ )
+		std::cout << i << " " << glm::to_string(glm::normalize(axes[i])) << ", " << depths[i] << std::endl;
+	std::cout << "\n";
+
+#if 1//Collide
+	h.depth = FLT_MAX;
+	for ( int i = 0; i < 15; i++ ) {
+		if ( depths[i] < h.depth  ) {
+			if ( axes[i] != glm::vec3( 0 ) ) {
+				h.depth = depths[i];
+				h.normal = glm::normalize(axes[i]);
+
+				if ( glm::dot( a.center - b.center, -h.normal ) > 0.0f )
+					h.normal = -h.normal;
+			}
+		}
+	}
+#endif
+#endif
+	std::cout << "FINAL: " << glm::to_string( h.normal ) << ", " << h.depth << std::endl;
 	return true;
-
-
-}
-
-//Test OBB and give back hit info
-bool TestOBBOBB2( OBB& a, OBB& b , HitInfo& h) {
-	float minDepth = 0.0f;
-	glm::vec3 depthNormal = glm::vec3( 0 );
-
-	glm::vec3* aAxes = a.GetAxes();
-	glm::vec3* bAxes = b.GetAxes();
-
-	glm::vec3 allAxes[] = {
-			aAxes[0],
-			aAxes[1],
-			aAxes[2],
-			bAxes[0],
-			bAxes[1],
-			bAxes[2],
-			glm::cross( aAxes[0], bAxes[0] ),
-			glm::cross( aAxes[0], bAxes[1] ),
-			glm::cross( aAxes[0], bAxes[2] ),
-			glm::cross( aAxes[1], bAxes[0] ),
-			glm::cross( aAxes[1], bAxes[1] ),
-			glm::cross( aAxes[1], bAxes[2] ),
-			glm::cross( aAxes[2], bAxes[0] ),
-			glm::cross( aAxes[2], bAxes[1] ),
-			glm::cross( aAxes[2], bAxes[2] )
-	};
-
-	glm::vec3* aVerts = a.GetVertices();
-	glm::vec3* bVerts = b.GetVertices();
-
-
 }

@@ -14,9 +14,9 @@
 /* TODO LIST BY THE TIME I DIE */
 /*
 * doing now
-* Engine: SAT
 * do next
-* Render: DRAW LINES
+    Folderize project
+    Render: DRAW LINES
 * 
    ====     RENDERING       ======  
          1) Textures (Done)
@@ -63,12 +63,17 @@
             b) interpolate & predict Camera ( Done ) 
         3) Consistent Window size ( Done )
         4) Individual entity animations and non recursive draw ( Done ) 
-        5) basic SAT
-            Collision check
-            Collison info ( penetration depth, normal )
-        Eventually
-         Broad Phase Checking
-         BSP
+        5) basic SAT ( Done ) 
+        6) Broad Phase Checking
+        
+        Eventaully
+        1) Heirechy
+
+   ======= PHYSICS =========
+        1) Rigidbody
+            1) Mass
+            2) Velocity (move out of transform)
+        2) Basic Movement and acceleration
    ======== GAME  ========
 
    */
