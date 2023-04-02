@@ -243,13 +243,7 @@ bool TestOBBOBB( OBB& a, OBB& b, HitInfo& h ) {
 	depths[14] = DEPTH; 
 
 
-#if 1//Print
-	std::cout << "\n";
-	for ( int i = 0; i < 15; i++ )
-		std::cout << i << " " << glm::to_string(glm::normalize(axes[i])) << ", " << depths[i] << std::endl;
-	std::cout << "\n";
 
-#if 1//Collide
 	h.depth = FLT_MAX;
 	for ( int i = 0; i < 15; i++ ) {
 		if ( depths[i] < h.depth  ) {
@@ -262,8 +256,5 @@ bool TestOBBOBB( OBB& a, OBB& b, HitInfo& h ) {
 			}
 		}
 	}
-#endif
-#endif
-	std::cout << "FINAL: " << glm::to_string( h.normal ) << ", " << h.depth << std::endl;
 	return true;
 }
