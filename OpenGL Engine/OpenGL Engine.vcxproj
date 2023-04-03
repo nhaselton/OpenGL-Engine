@@ -168,6 +168,7 @@
     <ClCompile Include="src\Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Physics\RigidBody.h" />
     <ClInclude Include="src\Renderer\Animation.h" />
     <ClInclude Include="src\Core\Camera.h" />
     <ClInclude Include="src\Physics\Collisions.h" />

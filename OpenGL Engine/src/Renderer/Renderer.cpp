@@ -259,7 +259,6 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	}
 	for ( int i = 0 ;i < entities.size(); i++ )
 		DrawOBB( entities[i] );
-
 }
 
 void Renderer::DrawSkyBox() {

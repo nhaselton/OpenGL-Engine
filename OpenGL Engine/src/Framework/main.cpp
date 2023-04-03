@@ -63,7 +63,9 @@
             b) interpolate & predict Camera ( Done ) 
         3) Consistent Window size ( Done )
         4) Individual entity animations and non recursive draw ( Done ) 
-        5) basic SAT ( Done ) 
+        5) basic SAT ( Done )
+        6) line OBB
+        7) AABB and optimized functions
         6) Broad Phase Checking
         
         Eventaully

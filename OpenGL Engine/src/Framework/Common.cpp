@@ -24,7 +24,7 @@ Common::Common() {
 
 void Common::Init() {
 	window = new Window;
-	window->Init(width,height);
+	window->Init( width, height );
 
 	renderer = new Renderer;
 	renderer->Init( window, &camera );
@@ -34,7 +34,7 @@ void Common::Init() {
 #else
 	InitPhysicsScene();
 #endif
-	
+
 
 	lastTime = glfwGetTime();
 	tickRate = 1.0 / 60.0;
@@ -57,54 +57,51 @@ void Common::Frame() {
 			accum -= tickRate;
 
 			for ( int i = 0; i < entites.size(); i++ ) {
-					entites[i].transform.SetPosition( entites[i].transform.Position() + entites[i].transform.Velocity() );
-					entites[i].boundingBox.center = entites[i].transform.Position();
+				entites[i].transform.SetPosition( entites[i].transform.Position() + entites[i].transform.Velocity() );
+				entites[i].boundingBox.center = entites[i].transform.Position();
 			}
-#if 0
 			HitInfo h { 0 };
-			if ( TestOBBOBB2( entites[0].boundingBox, entites[1].boundingBox, h ) ) {
-				//std::cout << "HIT" << glm::to_string(h.normal) << ",  " << h.depth << std::endl;
-				entites[0].transform.Translate( -h.normal * h.depth );
-				entites[0].boundingBox.center = entites[0].transform.Position();
-			}
-#else
-			HitInfo h{ 0 };
-			if ( TestOBBOBB( entites[0].boundingBox, entites[1].boundingBox , h) ) {
+			if ( TestOBBOBB( entites[0].boundingBox, entites[1].boundingBox, h ) ) {
 				entites[0].transform.Translate( h.normal * h.depth );
 				entites[0].boundingBox.center = entites[0].transform.Position();
 				std::cout << "HIT";
 			}
-#endif
-	}
+		}
 
 		if ( Input::keys[GLFW_KEY_P] )
 			entites[0].boundingBox.u = glm::mat3( 1 );
+
+		glm::vec3 p0 = camera.transform.Position();
+		glm::vec3 p1 = p0 + ( camera.GetForward() * 100.0f );
+
+		std::cout << TestLineIntersectsOBB( p0, p1, entites[0].boundingBox ) << std::endl;
 
 
 		float interp = ( float ) ( accum / tickRate );
 		renderer->BeginFrame();
 		renderer->DrawFrame( entites, lights, interp );
 		renderer->EndFrame();
-		
+
 		lastTime = now;
 	}
 }
 
+
 void Common::InitPhysicsScene() {
-	glm::vec3 box1Pos = glm::vec3( 0 );
-	glm::vec3 box2Pos = glm::vec3( 5, 0 , 0 );
-	
-	glm::mat3 box1Rot(1.0);
+	glm::vec3 box1Pos = glm::vec3( 3 );
+	glm::vec3 box2Pos = glm::vec3( 5, 0, 0 );
+
+	glm::mat3 box1Rot( 1.0 );
 	float t = glm::radians( 45.0f );
 #if 1
 	box1Rot[0] = glm::vec3( -sinf( t ), cosf( t ), 0 );
 	box1Rot[1] = glm::vec3( cos( t ), sinf( t ), 0 );
 	box1Rot[2] = glm::vec3( 0, 0, 1 );
 #endif
-	
-	
+
+
 	camera.transform.SetPosition( glm::vec3( 0, 0, -5 ) );
-	camera.transform.SetRotation( glm::vec3( 0 , glm::radians(90.f) , 0) );
+	camera.transform.SetRotation( glm::vec3( 0, glm::radians( 90.f ), 0 ) );
 
 	//Box
 	Entity box;
@@ -116,27 +113,21 @@ void Common::InitPhysicsScene() {
 	obb.u = box1Rot;
 	obb.e = glm::vec3( 1.0f );
 	box.boundingBox = obb;
-	box.transform.SetVelocity( glm::vec3(0, 0, 0) );
+	box.transform.SetVelocity( glm::vec3( 0, 0, 0 ) );
 	entites.push_back( box );
-	
+
 	//Monkey
 	Entity monkey;
 	monkey.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/monkey.gltf" ) );
 	monkey.transform.SetPosition( box2Pos );
-	
+
 	OBB obb2;
 	obb2.center = glm::vec3( monkey.transform.Position() );
 	obb2.u = glm::mat3( 1.0 );
 	obb2.e = glm::vec3( 1.0f );
 	monkey.boundingBox = obb2;
-	monkey.transform.SetVelocity(glm::vec3(0));
+	monkey.transform.SetVelocity( glm::vec3( 0 ) );
 	entites.push_back( monkey );
-
-
-	// Get OBB vertices working
-	glm::vec3* axes = obb.GetAxes();
-
-
 }
 
 
@@ -181,7 +172,7 @@ void Common::UpdateInput() {
 		entites[0].boundingBox.center = entites[0].transform.Position();
 	}
 	if ( Input::keys[GLFW_KEY_T] ) {
-		entites[0].transform.Translate( glm::vec3( 0, .25f,0 ) );
+		entites[0].transform.Translate( glm::vec3( 0, .25f, 0 ) );
 		entites[0].boundingBox.center = entites[0].transform.Position();
 	}
 	if ( Input::keys[GLFW_KEY_U] ) {
@@ -196,7 +187,7 @@ void Common::UpdateInput() {
 
 	if ( Input::keys[GLFW_KEY_RIGHT] ) {
 		camera.transform.AddRotationalVelocity( glm::vec3( 0, .5f, 0.0f ) * glm::vec3( .1f ) );
-	}	
+	}
 
 	if ( Input::keys[GLFW_KEY_DOWN] ) {
 		camera.transform.AddRotationalVelocity( glm::vec3( -.5f, 0, 0.0f ) * glm::vec3( .1f ) );
@@ -250,7 +241,7 @@ void Common::InitGraphicsScene() {
 	pointLight.hasShadow = true;
 	lights.push_back( pointLight );
 
-	Light directional{};
+	Light directional {};
 	directional.lType = LIGHT_DIRECTIONAL;
 	directional.color = glm::vec3( 1 );
 	directional.pos = glm::vec3( -8.3, 14.2, -0.8 );
@@ -265,7 +256,7 @@ void Common::InitGraphicsScene() {
 	spot.lType = LIGHT_SPOT;
 	spot.color = glm::vec3( 1, 1, 1 );
 	spot.cutoff = glm::cos( glm::radians( 30.0f ) );
-	spot.linear = 0.022	;
+	spot.linear = 0.022;
 	spot.outerCutoff = glm::cos( glm::radians( 45.f ) );
 	spot.pos = glm::vec3( -1.4, 1, 0.0 );
 	spot.direction = glm::vec3( 11, 0.1, -0.8 );

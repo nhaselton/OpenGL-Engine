@@ -19,24 +19,23 @@ public:
 	glm::vec3	e; // pos halfwidth extents of oobb
 public:
 	glm::vec3 GetMin() const{
-		return ( e ) ;
+		return ( e * u) ;
 	}
 
 	glm::vec3 GetMax() const{
-		return ( e ) ;
+		return ( e * u) ;
+	}
+	
+	glm::vec3 GetForward() {
+		return glm::vec3( 0, 0, 1 ) * u;
 	}
 
-
-	
-	glm::vec3* GetAxes() {
-	
-		glm::vec3 axes[3]{
-			glm::vec3( 0,0,1 ) * u,
-			glm::vec3( 1,0,0 ) * u, 
-			glm::vec3( 0,1,0 ) * u,
-		};
-
-
-		return axes;
+	glm::vec3 GetRight() {
+		return glm::vec3( 1, 0, 0 ) * u;
 	}
+
+	glm::vec3 GetUp() {
+		return glm::vec3( 0, 1, 0 ) * u;
+	}
+
 };

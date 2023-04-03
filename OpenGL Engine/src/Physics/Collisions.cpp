@@ -10,6 +10,12 @@ std::vector<glm::vec3> penetrationAxes;
 std::vector<float> penetrationAxesDistance;
 
 
+void swapf( float& a, float& b ) {
+	float temp = a;
+	a = b;
+	b = temp;
+}
+
 static float clampf( float f, float a, float b ) {
 	if ( f > b )
 		return b;
@@ -120,14 +126,6 @@ float ClosestPointSegmentSegmentSquared( glm::vec3 p1, glm::vec3 q1, glm::vec3 p
 		pg 159 for complexity
 */
 
-//pg 102
-
-//instead of exiting early
-// the axis with the least normalized overlap can be used as the contact normal 
-//and the overlap can be used to estimate the penetration depth
-
-
-//if by some miracle this works, i could just record the index of axes + calced depth and only do cross/ axes at the end for 11 less calulations
 bool TestOBBOBB( OBB& a, OBB& b, HitInfo& h ) {
 	float ra;
 	float rb;
@@ -258,3 +256,70 @@ bool TestOBBOBB( OBB& a, OBB& b, HitInfo& h ) {
 	}
 	return true;
 }
+
+//Like SAT where you project
+bool TestOBBIntersectsPlane( OBB& b, Plane& p ) {
+	//calcultae projection
+	float r = b.e[0] * fabs( glm::dot( p.n, b.u[0] ) )+
+		b.e[1] * fabs( glm::dot( p.n, b.u[1] ) )+
+		b.e[2] * fabs( glm::dot( p.n, b.u[2] ) );
+	
+	//get dist from center of box to plane
+	float s = glm::dot( p.n, b.center ) - p.d;
+	//intersection in range [-r,r]
+	return abs( s ) <= r;
+}
+
+//todo fix divice by zero error
+bool TestLineIntersectsPlane( glm::vec3 a, glm::vec3 b, Plane p, float& t, glm::vec3& q ) {
+	//get T value for line
+	glm::vec3 ab = b - a;
+	t = ( p.d - glm::dot( p.n, a ) ) / glm::dot( p.n, ab );
+
+	// if t [0,1] return point
+	if ( t >= 0.0f && t <= 1.0f ) {
+		q = a + t * ab;
+		return true;
+	}
+	//else it didnt collide
+	return false;
+}
+
+bool TestLineIntersectsAABB( glm::vec3 p0, glm::vec3 p1, OBB& b ) {
+	glm::vec3 c = b.center;
+	glm::vec3 e = b.e * b.u;
+	glm::vec3 m = ( p0 + p1 ) * .5f;//center of line
+	glm::vec3 d = p1 - m; // segment halflength
+	m = m - c; // translate box and segment to center
+
+	float adx = fabs( d.x );
+	if ( fabs( m.x ) > e.x + adx )
+		return false;
+
+	float ady = fabs( d.y );
+	if ( fabs( m.y ) > e.y + ady )
+		return false;
+
+	float adz = fabs( d.z );
+	if ( fabs( m.z ) > e.z + adz )
+		return 0;
+
+	adx += FLT_EPSILON;
+	ady += FLT_EPSILON;
+
+	if ( fabs( m.y * d.z - m.z * d.y ) > e.y * adz + e.z * ady )
+		return 0;
+
+	if ( fabs( m.z * d.x - m.x * d.z ) > e.x * adz + e.z * adx )
+		return 0;
+	
+	if ( fabs( m.x * d.y - m.y * d.x ) > e.x * ady + e.y * adx )
+		return 0;
+
+	//no seperating axis
+	return true;
+}
+
+bool TestLineIntersectsOBB( glm::vec3 p0, glm::vec3 p1, OBB& b ) {
+
+}	

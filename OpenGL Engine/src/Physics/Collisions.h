@@ -18,7 +18,11 @@ float				DistancePointToOBBSquared( glm::vec3 p, OBB& b );
 float				ClosestPointSegmentSegmentSquared( glm::vec3 p1, glm::vec3 q1, glm::vec3 p2, glm::vec3 q2, float& s, float& t, glm::vec3& c1, glm::vec3& c2 );
 //Given OBB A & B return if there is intersections
 bool				TestOBBOBB( OBB& a, OBB& b, HitInfo& h );
-//Given point a, b see if it intersects plane p, give back t and q
-bool				TestLineInteresctAABB( glm::vec3 a, glm::vec3 b, Plane& p, float& t, glm::vec3& q);
-
-
+//Check if obb intersects obb
+bool				TestOBBIntersectsPlane(OBB& a, Plane& p );
+//Given 2 points of a segment, a,b and plane p return if they collide and give back normalized point t and point q
+bool				TestLineIntersectsPlane( glm::vec3 a, glm::vec3 b, Plane p, float& t, glm::vec3& q );
+//given 2 points check if it collides with an AABB
+bool				TestLineIntersectsAABB( glm::vec3 p0, glm::vec3 p1, OBB& b );
+//Covert				OBB to AABB and call test TestLineIntersectsAABB
+bool				TestLineIntersectsOBB( glm::vec3 p0, glm::vec3 p1, OBB& b );
