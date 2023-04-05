@@ -53,7 +53,6 @@ void Common::Frame() {
 			glfwPollEvents();
 			UpdateInput();
 
-
 			accum -= tickRate;
 
 			for ( int i = 0; i < entites.size(); i++ ) {
@@ -88,8 +87,8 @@ void Common::Frame() {
 
 
 void Common::InitPhysicsScene() {
-	glm::vec3 box1Pos = glm::vec3( 3 );
-	glm::vec3 box2Pos = glm::vec3( 5, 0, 0 );
+	glm::vec3 box1Pos = glm::vec3( 0 );
+	glm::vec3 box2Pos = glm::vec3( 500, 0, 0 );
 
 	glm::mat3 box1Rot( 1.0 );
 	float t = glm::radians( 45.0f );

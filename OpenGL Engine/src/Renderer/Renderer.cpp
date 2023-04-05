@@ -259,6 +259,16 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	}
 	for ( int i = 0 ;i < entities.size(); i++ )
 		DrawOBB( entities[i] );
+
+
+	//Draw crosshiar
+	glDisable( GL_DEPTH_TEST );
+	debugDepthQuadShader->Use();
+	glm::mat4 scale;
+	debugDepthQuadShader->SetMat4( "scale", glm::scale( glm::mat4( 1.0 ), glm::vec3( 0.005, 0.005f, .1f ) ) );
+	renderQuad();
+	glEnable( GL_DEPTH_TEST );
+
 }
 
 void Renderer::DrawSkyBox() {
@@ -576,7 +586,6 @@ void Renderer::BindTextures( Mesh* mesh ) {
 }
 
 void Renderer::EndFrame() {
-
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 	glfwSwapBuffers( window->GetHandle() );
