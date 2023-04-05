@@ -576,7 +576,6 @@ void Renderer::BindTextures( Mesh* mesh ) {
 }
 
 void Renderer::EndFrame() {
-
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData( ImGui::GetDrawData() );
 	glfwSwapBuffers( window->GetHandle() );

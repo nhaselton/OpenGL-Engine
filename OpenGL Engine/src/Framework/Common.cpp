@@ -17,6 +17,7 @@
 #include "../tools/Tools.h"
 #include "../physics/OBB.h"
 #include "../physics/Collisions.h"
+#include "../Physics/Physics.h"
 Common::Common() {
 	width = 1280;
 	height = 720;
@@ -57,9 +58,12 @@ void Common::Frame() {
 			accum -= tickRate;
 
 			for ( int i = 0; i < entites.size(); i++ ) {
-				entites[i].transform.SetPosition( entites[i].transform.Position() + entites[i].transform.Velocity() );
+
+				Integrate( entites[i] );
+				//entites[i].transform.SetPosition( entites[i].transform.Position() + entites[i].transform.Velocity() );
 				entites[i].boundingBox.center = entites[i].transform.Position();
 			}
+
 			HitInfo h { 0 };
 			if ( TestOBBOBB( entites[0].boundingBox, entites[1].boundingBox, h ) ) {
 				entites[0].transform.Translate( h.normal * h.depth );
@@ -67,14 +71,11 @@ void Common::Frame() {
 				std::cout << "HIT";
 			}
 		}
-
 		if ( Input::keys[GLFW_KEY_P] )
 			entites[0].boundingBox.u = glm::mat3( 1 );
 
 		glm::vec3 p0 = camera.transform.Position();
 		glm::vec3 p1 = p0 + ( camera.GetForward() * 100.0f );
-
-		std::cout << TestLineIntersectsOBB( p0, p1, entites[0].boundingBox ) << std::endl;
 
 
 		float interp = ( float ) ( accum / tickRate );
@@ -88,7 +89,7 @@ void Common::Frame() {
 
 
 void Common::InitPhysicsScene() {
-	glm::vec3 box1Pos = glm::vec3( 3 );
+	glm::vec3 box1Pos = glm::vec3( 0 );
 	glm::vec3 box2Pos = glm::vec3( 5, 0, 0 );
 
 	glm::mat3 box1Rot( 1.0 );
@@ -113,8 +114,10 @@ void Common::InitPhysicsScene() {
 	obb.u = box1Rot;
 	obb.e = glm::vec3( 1.0f );
 	box.boundingBox = obb;
-	box.transform.SetVelocity( glm::vec3( 0, 0, 0 ) );
+	//box.rigidBody.AddForce( glm::normalize( glm::vec3( 1, 1, 0 )  ) * .15f );
 	entites.push_back( box );
+
+
 
 	//Monkey
 	Entity monkey;
@@ -126,7 +129,6 @@ void Common::InitPhysicsScene() {
 	obb2.u = glm::mat3( 1.0 );
 	obb2.e = glm::vec3( 1.0f );
 	monkey.boundingBox = obb2;
-	monkey.transform.SetVelocity( glm::vec3( 0 ) );
 	entites.push_back( monkey );
 }
 
@@ -137,66 +139,43 @@ void Common::UpdateInput() {
 		exit( 0 );
 	}
 
-	camera.transform.SetVelocity( glm::vec3( 0 ) );
-	camera.transform.SetRotationalVelocity( glm::vec3( 0 ) );
+	camera.rigidBody.velocity =  glm::vec3( 0 ) ;
+	camera.rigidBody.angularVelocity = glm::vec3( 0 );
 
 	if ( Input::keys[GLFW_KEY_W] ) {
-		camera.transform.AddVelocity( camera.GetForward() * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( camera.GetForward() * glm::vec3( .1f ) );
 	}
 
 	if ( Input::keys[GLFW_KEY_S] ) {
-		camera.transform.AddVelocity( -camera.GetForward() * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( -camera.GetForward() * glm::vec3( .1f ) );
 	}
 
 	if ( Input::keys[GLFW_KEY_A] ) {
-		camera.transform.AddVelocity( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
 	}
 	if ( Input::keys[GLFW_KEY_D] ) {
-		camera.transform.AddVelocity( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
 	}
-
-	if ( Input::keys[GLFW_KEY_Y] ) {
-		entites[0].transform.Translate( camera.GetForward() * .25f );
-		entites[0].boundingBox.center = entites[0].transform.Position();
-	}
-	if ( Input::keys[GLFW_KEY_G] ) {
-		entites[0].transform.Translate( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
-		entites[0].boundingBox.center = entites[0].transform.Position();
-	}
-	if ( Input::keys[GLFW_KEY_J] ) {
-		entites[0].transform.Translate( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
-		entites[0].boundingBox.center = entites[0].transform.Position();
-	}
-	if ( Input::keys[GLFW_KEY_H] ) {
-		entites[0].transform.Translate( -camera.GetForward() * .25f );
-		entites[0].boundingBox.center = entites[0].transform.Position();
-	}
-	if ( Input::keys[GLFW_KEY_T] ) {
-		entites[0].transform.Translate( glm::vec3( 0, .25f, 0 ) );
-		entites[0].boundingBox.center = entites[0].transform.Position();
-	}
-	if ( Input::keys[GLFW_KEY_U] ) {
-		entites[0].transform.Translate( glm::vec3( 0, -.25f, 0 ) );
-		entites[0].boundingBox.center = entites[0].transform.Position();
-	}
-
 
 	if ( Input::keys[GLFW_KEY_LEFT] ) {
-		camera.transform.AddRotationalVelocity( glm::vec3( 0, -.5f, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( 0, -.5f, 0.0f ) * glm::vec3( .1f ) );
 	}
 
 	if ( Input::keys[GLFW_KEY_RIGHT] ) {
-		camera.transform.AddRotationalVelocity( glm::vec3( 0, .5f, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( 0, .5f, 0.0f ) * glm::vec3( .1f ) );
 	}
 
 	if ( Input::keys[GLFW_KEY_DOWN] ) {
-		camera.transform.AddRotationalVelocity( glm::vec3( -.5f, 0, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( -.5f, 0, 0.0f ) * glm::vec3( .1f ) );
 	}
 
 	if ( Input::keys[GLFW_KEY_UP] ) {
-		camera.transform.AddRotationalVelocity( glm::vec3( .5f, 0, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( .5f, 0, 0.0f ) * glm::vec3( .1f ) );
 	}
-	camera.transform.Update();
+
+
+	camera.transform.position += camera.rigidBody.velocity;
+	camera.transform.rotation += camera.rigidBody.angularVelocity;
 }
 
 

@@ -3,7 +3,8 @@
 #include "../Renderer/Model.h"
 #include "../Renderer/EntModel.h"
 #include "Transform.h"
-#include "../Physics/OBB.h" 
+#include "../Physics/OBB.h"
+#include "../Physics/RigidBody.h"
 class Entity {
 
 public:
@@ -15,4 +16,5 @@ public:
 	Transform	transform;
 	EntModel	model;
 	OBB			boundingBox;
+	RigidBody	rigidBody;
 };

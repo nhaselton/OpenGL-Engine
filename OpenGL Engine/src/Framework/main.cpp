@@ -15,7 +15,8 @@
 /*
 * doing now
 * do next
-    Folderize project
+    Draw "crosshair"
+    OOB Line
     Render: DRAW LINES
 * 
    ====     RENDERING       ======  
@@ -72,8 +73,8 @@
         1) Heirechy
 
    ======= PHYSICS =========
-        1) Rigidbody
-            1) Mass
+        1) Rigidbody ( Done )
+            1) Mass ( Done )
             2) Velocity (move out of transform)
         2) Basic Movement and acceleration
    ======== GAME  ========

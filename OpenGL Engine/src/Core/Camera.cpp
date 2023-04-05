@@ -34,7 +34,7 @@ glm::vec3 Camera::GetForward() {
 
 glm::mat4 Camera::GetInterpolatedView( float percent ) {
 	glm::vec3 posNow = transform.Position();
-	glm::vec3 posPrev = transform.Position() - transform.Velocity();
+	glm::vec3 posPrev = transform.Position() - rigidBody.velocity;
 	glm::vec3 _pos = posNow * percent + posPrev* ( 1.0f - percent );
 
 	//TODO fix rotations and use quat for angular velocity
@@ -44,7 +44,7 @@ glm::mat4 Camera::GetInterpolatedView( float percent ) {
 	//glm::vec3 _rot = glm::eulerAngles( _rotQ );
 	
 	glm::vec3 rotNow = transform.Rotation();
-	glm::vec3 rotPrev = transform.Rotation() - transform.RotationalVelocity();
+	glm::vec3 rotPrev = transform.Rotation() - rigidBody.angularVelocity;
 	glm::vec3 _rot = ( rotNow ) *percent + rotPrev * ( 1.0f - percent );
 	//glm::vec3 _rot = transform.Rotation();
 
