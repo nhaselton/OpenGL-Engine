@@ -321,39 +321,5 @@ bool TestLineIntersectsAABB( glm::vec3 p0, glm::vec3 p1, OBB& b ) {
 }
 
 bool TestLineIntersectsOBB( glm::vec3 p0, glm::vec3 p1, OBB& b ) {
-	glm::vec3 l = glm::normalize( p1 - p0 );
-	glm::vec3 mid = ( p0 + p1 ) * .5f;
-	float hl = glm::length( p0 + p1 );
 
-
-	//Same as SAT
-	glm::vec3 T = b.center - mid;
-	glm::vec3 v;
-	float r;
-
-	if ( fabs( T.x ) > b.e.x + hl * fabs( l.x ) )
-		return false;
-
-	if ( fabs( T.y ) > b.e.y + hl * fabs( l.y ) )
-		return false;
-
-	if ( fabs( T.z ) > b.e.z + hl * fabs( l.z ) )
-		return false;
-
-	r = b.e.y * fabs( l.z ) + b.e.z * fabs( l.y );
-
-	if ( fabs( T.y * l.z - T.z * l.y ) > r )
-		return false;
-
-	r = b.e.x * fabs( l.z ) + b.e.z * fabs( l.x );
-
-	if ( fabs( T.z * l.x - T.x * l.z ) > r )
-		return false;
-
-	r = b.e.x * fabs( l.y ) + b.e.y * fabs( l.x );
-
-	if ( fabs( T.x * l.y - T.y * l.x ) > r )
-		return false;
-
-	return true;
 }	
