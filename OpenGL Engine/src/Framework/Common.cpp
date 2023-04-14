@@ -11,11 +11,13 @@
 #include "ResourceManager.h"
 #include "Common.h"
 #include "Window.h"
+#include "Input.h"
+
 #include "../renderer/Renderer.h"
 #include "../renderer/Mesh.h"
-#include "Input.h"
+
 #include "../tools/Tools.h"
-#include "../physics/OBB.h"
+#include "../physics/Colliders.h"
 #include "../physics/Collisions.h"
 #include "../Physics/Physics.h"
 Common::Common() {
@@ -35,8 +37,6 @@ void Common::Init() {
 #else
 	InitPhysicsScene();
 #endif
-
-
 	lastTime = glfwGetTime();
 	tickRate = 1.0 / 60.0;
 	accum = 0.0;
@@ -59,8 +59,6 @@ void Common::Frame() {
 
 			for ( int i = 0; i < entites.size(); i++ ) {
 
-				Integrate( entites[i] );
-				//entites[i].transform.SetPosition( entites[i].transform.Position() + entites[i].transform.Velocity() );
 				entites[i].boundingBox.center = entites[i].transform.Position();
 			}
 
@@ -114,10 +112,9 @@ void Common::InitPhysicsScene() {
 	obb.u = box1Rot;
 	obb.e = glm::vec3( 1.0f );
 	box.boundingBox = obb;
+	obb.type = COLLIDER_OBB;
 	//box.rigidBody.AddForce( glm::normalize( glm::vec3( 1, 1, 0 )  ) * .15f );
 	entites.push_back( box );
-
-
 
 	//Monkey
 	Entity monkey;
@@ -128,11 +125,10 @@ void Common::InitPhysicsScene() {
 	obb2.center = glm::vec3( monkey.transform.Position() );
 	obb2.u = glm::mat3( 1.0 );
 	obb2.e = glm::vec3( 1.0f );
+	obb2.type = COLLIDER_OBB;
 	monkey.boundingBox = obb2;
 	entites.push_back( monkey );
 }
-
-
 
 void Common::UpdateInput() {
 	if ( Input::keys[GLFW_KEY_ESCAPE] ) {
@@ -172,7 +168,6 @@ void Common::UpdateInput() {
 	if ( Input::keys[GLFW_KEY_UP] ) {
 		camera.rigidBody.angularVelocity += ( glm::vec3( .5f, 0, 0.0f ) * glm::vec3( .1f ) );
 	}
-
 
 	camera.transform.position += camera.rigidBody.velocity;
 	camera.transform.rotation += camera.rigidBody.angularVelocity;

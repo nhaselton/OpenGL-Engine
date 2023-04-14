@@ -1,6 +1,6 @@
 #pragma once
-#include <glm/glm.hpp>
 #include "Entity.hpp"
+#include <glm/glm.hpp>
 
 class Camera : public Entity{
 public:
@@ -14,6 +14,4 @@ public:
 	glm::vec3 GetForward();
 	glm::mat4 GetView();
 	glm::mat4 GetInterpolatedView( float percent );
-
-	RigidBody rb;
 };

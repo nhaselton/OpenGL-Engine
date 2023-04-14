@@ -149,6 +149,8 @@
     <None Include="res\shaders\shader\Shader.vs" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Physics\Physics.cpp" />
+    <ClCompile Include="src\Physics\RigidBody.cpp" />
     <ClCompile Include="src\Renderer\Animation.cpp" />
     <ClCompile Include="src\Core\Camera.cpp" />
     <ClCompile Include="src\Physics\Collisions.cpp" />
@@ -168,6 +170,7 @@
     <ClCompile Include="src\Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Physics\Physics.h" />
     <ClInclude Include="src\Physics\RigidBody.h" />
     <ClInclude Include="src\Renderer\Animation.h" />
     <ClInclude Include="src\Core\Camera.h" />
@@ -179,7 +182,7 @@
     <ClInclude Include="src\Renderer\Light.h" />
     <ClInclude Include="src\Renderer\Mesh.h" />
     <ClInclude Include="src\Renderer\Model.h" />
-    <ClInclude Include="src\Physics\OBB.h" />
+    <ClInclude Include="src\Physics\Colliders.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
     <ClInclude Include="src\Framework\ResourceManager.h" />
     <ClInclude Include="src\Renderer\Shader.h" />

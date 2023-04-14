@@ -1,7 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 
-#include "OBB.h"
+#include "Colliders.h"
 
 struct HitInfo {
 	bool hit;
@@ -23,6 +23,6 @@ bool				TestOBBIntersectsPlane(OBB& a, Plane& p );
 //Given 2 points of a segment, a,b and plane p return if they collide and give back normalized point t and point q
 bool				TestLineIntersectsPlane( glm::vec3 a, glm::vec3 b, Plane p, float& t, glm::vec3& q );
 //given 2 points check if it collides with an AABB
-bool				TestLineIntersectsAABB( glm::vec3 p0, glm::vec3 p1, OBB& b );
+bool				TestLineIntersectsAABB( glm::vec3 p0, glm::vec3 p1, AABB& b );
 //Covert				OBB to AABB and call test TestLineIntersectsAABB
 bool				TestLineIntersectsOBB( glm::vec3 p0, glm::vec3 p1, OBB& b );

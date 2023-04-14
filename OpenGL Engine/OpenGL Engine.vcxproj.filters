@@ -70,6 +70,12 @@
     <ClCompile Include="src\Physics\Collisions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Physics\Physics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Physics\RigidBody.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Renderer\Shader.h">
@@ -123,13 +129,16 @@
     <ClInclude Include="src\Renderer\EntModel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Physics\OBB.h">
+    <ClInclude Include="src\Physics\Colliders.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Physics\Collisions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Physics\RigidBody.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Physics\Physics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

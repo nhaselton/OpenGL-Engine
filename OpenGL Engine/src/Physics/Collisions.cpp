@@ -1,5 +1,5 @@
 #pragma once
-#include "OBB.h"
+#include "Colliders.h"
 #include "Collisions.h"
 #include <iostream>
 #include <glm/glm.hpp>
@@ -285,14 +285,15 @@ bool TestLineIntersectsPlane( glm::vec3 a, glm::vec3 b, Plane p, float& t, glm::
 	return false;
 }
 
-bool TestLineIntersectsAABB( glm::vec3 p0, glm::vec3 p1, OBB& b ) {
+bool TestLineIntersectsAABB( glm::vec3 p0, glm::vec3 p1, AABB& b ) {
 	glm::vec3 c = b.center;
-	glm::vec3 e = b.e * b.u;
+	glm::vec3 e = b.e;
 	glm::vec3 m = ( p0 + p1 ) * .5f;//center of line
 	glm::vec3 d = p1 - m; // segment halflength
 	m = m - c; // translate box and segment to center
 
 	float adx = fabs( d.x );
+
 	if ( fabs( m.x ) > e.x + adx )
 		return false;
 
@@ -324,7 +325,6 @@ bool TestLineIntersectsOBB( glm::vec3 p0, glm::vec3 p1, OBB& b ) {
 	glm::vec3 l = glm::normalize( p1 - p0 );
 	glm::vec3 mid = ( p0 + p1 ) * .5f;
 	float hl = glm::length( p0 + p1 );
-
 
 	//Same as SAT
 	glm::vec3 T = b.center - mid;

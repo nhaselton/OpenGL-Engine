@@ -1,4 +1,5 @@
 #include "Entity.hpp"
+#include "../Physics/RigidBody.h"
 
 Entity::Entity() {
 	transform = Transform();

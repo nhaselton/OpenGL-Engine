@@ -6,13 +6,23 @@
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+enum ColliderType {
+	COLLIDER_AABB,
+	COLLIDER_OBB
+};
+
 class Plane {
 public:
 	glm::vec3	n;
 	float		d;
 };
 
-class OBB {
+class Collider {
+public:
+	ColliderType type;
+};
+
+class OBB : public Collider{
 public:
 	glm::vec3	center;
 	glm::mat3	u; //rotation matrix
@@ -37,5 +47,10 @@ public:
 	glm::vec3 GetUp() {
 		return glm::vec3( 0, 1, 0 ) * u;
 	}
-
 };
+
+class AABB : public Collider {
+public:
+	glm::vec3 center;
+	glm::vec3 e;
+};	

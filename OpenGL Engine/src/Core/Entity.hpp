@@ -1,10 +1,11 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "../Physics/RigidBody.h"
 #include "../Renderer/Model.h"
 #include "../Renderer/EntModel.h"
 #include "Transform.h"
-#include "../Physics/OBB.h"
-#include "../Physics/RigidBody.h"
+#include "../Physics/Colliders.h"
+
 class Entity {
 
 public:

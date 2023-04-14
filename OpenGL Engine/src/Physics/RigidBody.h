@@ -12,5 +12,4 @@ public:
 	bool		useGravity;
 public:
 	void		AddForce(glm::vec3 force);
-	void		Integrate();
 };
