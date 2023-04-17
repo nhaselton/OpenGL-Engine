@@ -50,6 +50,8 @@ void Common::Frame() {
 		double now = glfwGetTime();
 		accum += ( now - lastTime );
 
+
+
 		while ( accum > tickRate ) {
 			glfwPollEvents();
 			UpdateInput();
@@ -57,18 +59,59 @@ void Common::Frame() {
 
 			accum -= tickRate;
 
+	//  AABB Continious
+#if 0 
 			for ( int i = 0; i < entites.size(); i++ ) {
 
-				entites[i].boundingBox.center = entites[i].transform.Position();
-			}
+				AABB aabbA;
+				aabbA.center = entites[0].boundingBox.center;
+				aabbA.e = entites[0].boundingBox.e;
 
-			HitInfo h { 0 };
-			if ( TestOBBOBB( entites[0].boundingBox, entites[1].boundingBox, h ) ) {
-				entites[0].transform.Translate( h.normal * h.depth );
-				entites[0].boundingBox.center = entites[0].transform.Position();
-				std::cout << "HIT";
+				AABB aabbB;
+				aabbB.center = entites[1].boundingBox.center;
+				aabbB.e = entites[1].boundingBox.e;
+
+				//Collision Testing
+
+
+				if ( entites[i].rigidBody.velocity != glm::vec3(0) ) {
+
+					ContinuousHitInfo hi = TestContinuousAABB( aabbA, aabbB, entites[0].rigidBody.velocity, entites[1].rigidBody.velocity );
+					if ( !hi.hit ) {
+						std::cout << "HIT\n";
+
+						entites[i].transform.position += entites[i].rigidBody.velocity;
+						entites[i].boundingBox.center = entites[i].transform.Position();
+					}
+					//if hit, calc time and move by that much
+					else {
+						glm::vec3 newVel = hi.time * entites[i].rigidBody.velocity;
+						entites[i].transform.position += newVel;
+						entites[i].boundingBox.center = entites[i].transform.Position();
+						entites[i].rigidBody.velocity = glm::vec3( 0 );
+					}
+				}
 			}
+#endif 
+
+			AABB aabbA;
+			aabbA.center = entites[0].boundingBox.center;
+			aabbA.e = entites[0].boundingBox.e;
+
+			AABB aabbB;
+			aabbB.center = entites[1].boundingBox.center;
+			aabbB.e = entites[1].boundingBox.e;
+
+			entites[0].boundingBox.center = entites[0].transform.position;
+			entites[1].boundingBox.center = entites[1].transform.position;
+			
+			HitInfo he = GJK( aabbA, aabbB );
+			if ( he.hit )
+				std::cout << glm::to_string(he.normal) << ", " << he.depth << std::endl;
+
+
 		}
+		
 		if ( Input::keys[GLFW_KEY_P] )
 			entites[0].boundingBox.u = glm::mat3( 1 );
 
@@ -88,11 +131,11 @@ void Common::Frame() {
 
 void Common::InitPhysicsScene() {
 	glm::vec3 box1Pos = glm::vec3( 0 );
-	glm::vec3 box2Pos = glm::vec3( 5, 0, 0 );
+	glm::vec3 box2Pos = glm::vec3( 2.5, 0, 0 );
 
 	glm::mat3 box1Rot( 1.0 );
 	float t = glm::radians( 45.0f );
-#if 1
+#if 0
 	box1Rot[0] = glm::vec3( -sinf( t ), cosf( t ), 0 );
 	box1Rot[1] = glm::vec3( cos( t ), sinf( t ), 0 );
 	box1Rot[2] = glm::vec3( 0, 0, 1 );
@@ -128,6 +171,9 @@ void Common::InitPhysicsScene() {
 	obb2.type = COLLIDER_OBB;
 	monkey.boundingBox = obb2;
 	entites.push_back( monkey );
+
+	entites[0].rigidBody.velocity = glm::vec3( .2f, 0, 0 );
+	entites[1].rigidBody.velocity = glm::vec3( 0, 0, 0 );
 }
 
 void Common::UpdateInput() {
@@ -135,7 +181,7 @@ void Common::UpdateInput() {
 		exit( 0 );
 	}
 
-	camera.rigidBody.velocity =  glm::vec3( 0 ) ;
+	camera.rigidBody.velocity = glm::vec3( 0 );
 	camera.rigidBody.angularVelocity = glm::vec3( 0 );
 
 	if ( Input::keys[GLFW_KEY_W] ) {
@@ -215,7 +261,7 @@ void Common::InitGraphicsScene() {
 	pointLight.hasShadow = true;
 	lights.push_back( pointLight );
 
-	Light directional {};
+	Light directional{};
 	directional.lType = LIGHT_DIRECTIONAL;
 	directional.color = glm::vec3( 1 );
 	directional.pos = glm::vec3( -8.3, 14.2, -0.8 );

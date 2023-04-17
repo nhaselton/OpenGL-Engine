@@ -170,6 +170,7 @@
     <ClCompile Include="src\Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Physics\Simplex.h" />
     <ClInclude Include="src\Physics\Physics.h" />
     <ClInclude Include="src\Physics\RigidBody.h" />
     <ClInclude Include="src\Renderer\Animation.h" />
