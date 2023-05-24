@@ -14,6 +14,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
+#include "../Physics/Collisions.h"
 int index;
 
 //cube vertiecs for a skybox
@@ -53,7 +54,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 	dynamicShadowShader = new Shader( "res/shaders/DynamicShadowShader" );
 	skyboxShader = new Shader( "res/shaders/skyboxShader" );
 	boundingBoxShader = new Shader( "res/shaders/boundingboxshader" );
-
+	primShader = new Shader( "res/shaders/primShader" );
 
 	projection = glm::perspective( glm::radians( 90.0f ), 1280.0f / 720.0f, .1f, 100.0f );
 	this->camera = camera;
@@ -103,6 +104,11 @@ void Renderer::Init( Window* window, Camera* camera ) {
 		"res/textures/skybox/back.jpg" };
 
 	//skybox = CreateSkyBox( paths );
+
+	cube = ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" );
+	capsule = ResourceManager::Get().GetModel( "res/models/gltf/prim/capsule.gltf" );
+	sphere = ResourceManager::Get().GetModel("res/models/gltf/prim/sphere.gltf");
+
 }
 
 
@@ -258,7 +264,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 		}
 	}
 	for ( int i = 0 ;i < entities.size(); i++ )
-		DrawOBB( entities[i] );
+		DrawCollider( entities[i] );
 }
 
 void Renderer::DrawSkyBox() {
@@ -685,6 +691,7 @@ void Renderer::renderQuad() {
 	glBindVertexArray( 0 );
 }
 
+#if 0
 void Renderer::DrawOBB( Entity& entity ) {
 	Model* model = ResourceManager::Get().GetModel( "res/models/gltf/cube.gltf" );
 	glm::mat4 translation = glm::translate( glm::mat4(1.0), entity.boundingBox.center );
@@ -704,6 +711,7 @@ void Renderer::DrawOBB( Entity& entity ) {
 	glDepthFunc( GL_LESS );
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }
+#endif
 
 
 void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
@@ -724,14 +732,102 @@ void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
 			
 			if ( shouldTexture )
 				BindTextures( mesh );
-
+#if 0
 			if ( mesh->numIndices != 0 ) {
-				//glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
+				glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
 			}
 			else {
 				glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );
 			}
-
+#endif
 		}
 	}
+}
+
+void Renderer::DrawCollider( Entity& entity ) {
+	if ( !entity.rigidBody.collider )
+		return;
+
+	switch ( entity.rigidBody.collider->colliderType ) {
+	case COLLIDER_CAPSULE:
+		DrawCapsule( entity );
+		break;
+	case COLLIDER_HULL:
+		DrawHull( entity );
+		break;
+	case COLLIDER_SPHERE:
+		DrawSphere( entity );
+		break;
+	}
+}
+
+void Renderer::DrawSphere( Entity& entity ) {
+	primShader->Use();
+	primShader->SetMat4( "view", camera->GetView() );
+	primShader->SetMat4( "projection", projection );
+	
+	Sphere* collider = (Sphere*) entity.rigidBody.collider;
+
+	glm::mat4 trs;
+	//note not parent position, not what it uses for physics ceck but since it should reset we dont need to use ti
+	trs = glm::translate( glm::mat4( 1.0 ), glm::vec3( collider->c) + entity.transform.position);
+	trs = glm::scale( trs, glm::vec3( collider->r ) );
+	primShader->SetMat4( "model", trs );
+	
+	Mesh* mesh = &sphere->meshes[0];
+	mesh->BindVAO();
+
+	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+	
+	if ( mesh->numIndices != 0 ) 
+		glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
+	else 
+		glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );
+	
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+}
+
+void Renderer::DrawCapsule( Entity & entity ) {
+	primShader->Use();
+	primShader->SetMat4( "view", camera->GetView() );
+	primShader->SetMat4( "projection", projection );
+
+	Capsule* collider = ( Capsule* ) entity.rigidBody.collider;
+
+	Mesh* mesh = &sphere->meshes[0];
+	mesh->BindVAO();
+	glm::mat4 trs;
+
+	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+	
+	trs = glm::translate( glm::mat4( 1.0 ), glm::vec3( collider->c1 ) + entity.transform.position );
+	trs = glm::scale( trs, glm::vec3( collider->r ) );
+	primShader->SetMat4( "model", trs );
+	glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
+
+	trs = glm::translate( glm::mat4( 1.0 ), glm::vec3( collider->c2 ) + entity.transform.position );
+	trs = glm::scale( trs, glm::vec3( collider->r ) );
+	primShader->SetMat4( "model", trs );
+	glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
+
+
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+}
+
+void Renderer::DrawHull( Entity& entity ) {
+	Hull* hull = (Hull*) entity.rigidBody.collider;
+	Mesh* m = hull->drawMesh;
+	m->BindVAO();
+
+	glm::mat4 trs = glm::translate( glm::mat4( 1.0 ), entity.transform.position + hull->c );
+	trs = glm::scale( trs , entity.transform.scale );
+
+	primShader->Use();
+	primShader->SetMat4( "model", trs );
+	primShader->SetMat4( "view", camera->GetView() );
+	primShader->SetMat4( "projection", projection );
+
+	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+	glDrawElements( GL_TRIANGLES, m->numIndices, GL_UNSIGNED_SHORT, 0 );
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }

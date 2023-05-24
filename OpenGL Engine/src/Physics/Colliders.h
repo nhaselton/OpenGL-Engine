@@ -2,115 +2,92 @@
 #include <iostream>
 #include <vector>
 
+#include "../Core/Transform.h"
 #include "glm/gtx/string_cast.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-enum ColliderType {
-	COLLIDER_AABB,
-	COLLIDER_OBB
-};
-
 class Plane {
 public:
-	glm::vec3	n;
-	float		d;
+	glm::vec3 n;
+	float d;
+};
+
+enum ColliderType {
+	COLLIDER_SPHERE = 1,
+	COLLIDER_CAPSULE = 2,
+	COLLIDER_HULL = 3,
 };
 
 class Collider {
 public:
-	ColliderType type;
-	virtual std::vector<glm::vec3> GetVertices() const = 0; //probably should cache but dont want to constantly recalc (even though it probably will need to every time it moves)
-
-	glm::vec3 FarthestPointInDirection( glm::vec3 direction ) const{
-		glm::vec3 maxPoint = glm::vec3(0);
-		float   maxDistance = -FLT_MAX;
-
-		std::vector<glm::vec3> vertices = GetVertices();
-
-		for ( glm::vec3 vertex : vertices ) {
-			float distance = glm::dot( vertex, direction );
-			if ( distance > maxDistance ) {
-				maxDistance = distance;
-				maxPoint = vertex;
-			}
-		}
-		return maxPoint;
-	}
+	ColliderType colliderType;
 };
 
-class OBB : public Collider{
+class Sphere : public Collider{
 public:
-	glm::vec3	center;
-	glm::mat3	u; //rotation matrix
-	glm::vec3	e; // pos halfwidth extents of oobb
-public:
-	glm::vec3 GetMin() const{
-		return ( e * u) ;
+	Sphere() {
+		r = 1;
+		c = glm::vec3( 0 );
+		colliderType = COLLIDER_SPHERE;
 	}
-
-	glm::vec3 GetMax() const{
-		return ( e * u) ;
+	Sphere(glm::vec3 c, float r) {
+		this->r = r;
+		this->c = c;
+		colliderType = COLLIDER_SPHERE;
 	}
-	
-	glm::vec3 GetForward() {
-		return glm::vec3( 0, 0, 1 ) * u;
-	}
-
-	glm::vec3 GetRight() {
-		return glm::vec3( 1, 0, 0 ) * u;
-	}
-
-	glm::vec3 GetUp() {
-		return glm::vec3( 0, 1, 0 ) * u;
-	}
-
-	virtual std::vector<glm::vec3> GetVertices() const {
-		std::vector<glm::vec3> verts;
-		//TODO GET VERTICES
-		assert( 0 );
-		return verts;
-	}
+	float r;
+	glm::vec3 c;
 };
 
-class AABB : public Collider {
+class Capsule : public Collider {
 public:
-	glm::vec3 center;
-	glm::vec3 e;
-
-	inline glm::vec3 GetMin() const{
-		return center - e;
+	Capsule() {
+		c1 = glm::vec3( 0, 2, 0 );
+		c2 = glm::vec3( 0, 0, 0 );
+		float r = 0.5f;
+		colliderType = COLLIDER_CAPSULE;
 	}
 
-	inline glm::vec3 GetMax() const{
-		return center + e;
+	Capsule(glm::vec3 c1, glm::vec3 c2, float r) {
+		this->c1 = c1; 
+		this->c2 = c2; 
+		this->r = r;
+		colliderType = COLLIDER_CAPSULE;
 	}
 
-	virtual std::vector<glm::vec3> GetVertices() const {
-		std::vector<glm::vec3> vertices( 8 );
-		glm::vec3 min = GetMin();
-		glm::vec3 max = GetMax();
-		
-		vertices[0] = min;
-		vertices[1] = glm::vec3( min.x, min.y, max.z );
-		vertices[2] = glm::vec3( min.x, max.y, min.z );
-		vertices[3] = glm::vec3( max.x, min.y, min.z );
-		vertices[4] = glm::vec3( min.x, max.y, max.z );
-		vertices[5] = glm::vec3( max.x, min.y, max.z );
-		vertices[6] = glm::vec3( max.x, max.y, min.z );
-		vertices[7] = max;
-		return vertices;
-	}
+	glm::vec3 c1;
+	glm::vec3 c2;
+	float r;
 	
 
-};	
-class ConvexCollider : public Collider {
+};
+
+class Hull : public Collider {
 public:
-	//this caches vertices since you cant calc
+	Hull() {
+		colliderType = COLLIDER_HULL;
+		drawMesh = nullptr;
+		c = glm::vec3( 0 );
+	}
+
+	Hull( std::vector<glm::vec3> vertices, std::vector<unsigned short> indices );
+	
+
 	std::vector<glm::vec3> vertices;
+	std::vector<unsigned short> indices;
+	glm::vec3 c;
 
-	virtual std::vector<glm::vec3> GetVertices() const {
-		return vertices;
-	}
+	//please god fix this 
+	class Mesh* drawMesh;
 };
+
+struct HitInfo {
+	int numContacts;
+	float depth;
+	glm::vec3 contactPoints[4];
+	glm::vec3 normal;
+};
+
+Hull* CreateBoxHull(glm::vec3 offset, glm::vec3 scale);

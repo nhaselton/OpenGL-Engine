@@ -47,6 +47,7 @@ private:
 	Shader*			debugDepthQuadShader;
 	Shader*			skyboxShader;	
 	Shader*			boundingBoxShader;
+	Shader*			primShader;
 
 	class Window*	window;
 	Camera*			camera;
@@ -82,6 +83,11 @@ private:
 	SkyBox			skybox;
 	Texture			cubeMap;
 
+	//Primitives
+	Model*			cube;
+	Model*			capsule;
+	Model*			sphere;
+
 private:
 public:
 	void			DrawPointLight( Light& light , std::vector<Entity>& entities );
@@ -99,5 +105,10 @@ public:
 	void			DrawSkyBox();
 	void			DrawEntity(Shader* shader, Entity ent,bool shouldTexture);
 	void			DrawLights( std::vector<Light>& lights, std::vector<Entity>& entities );
-	void			DrawOBB(Entity& entity);
+	void			DrawCollider(Entity& entity);
+	void			DrawSphere(Entity& entity);
+	void			DrawCapsule(Entity& entity);
+	void			DrawHull( Entity& entity );
+	
+	
 };

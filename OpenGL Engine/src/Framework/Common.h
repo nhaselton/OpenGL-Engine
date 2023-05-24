@@ -13,6 +13,7 @@ public:
 
 	void				InitGraphicsScene();
 	void				InitPhysicsScene();
+	void				PhysicsUpdate();
 private:
 	Camera				camera;
 

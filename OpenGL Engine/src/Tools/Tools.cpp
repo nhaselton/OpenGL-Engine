@@ -311,8 +311,6 @@ Model LoadStaticModelGLTF( const char* _path ) {
 				std::string data = GetBinDataFromAccessor( accessor, json["bufferViews"][accessor.bufferView], binContents );
 				memcpy( normals.data(), data.c_str(), data.size() );
 
-
-
 			}
 
 			// ===== TANGENTS =========== /
@@ -373,7 +371,7 @@ Model LoadStaticModelGLTF( const char* _path ) {
 
 			for ( int i = 0; i < vertices.size(); i++ ) {
 				vertices[i].pos = positions[i];
-
+				
 				if ( texCoords.size() > 0 )
 					vertices[i].texCoords = texCoords[i];
 
@@ -391,8 +389,6 @@ Model LoadStaticModelGLTF( const char* _path ) {
 					vertices[i].boneIDs[1] = ( int ) joints[i].y;
 					vertices[i].boneIDs[2] = ( int ) joints[i].z;
 					vertices[i].boneIDs[3] = ( int ) joints[i].w; 
-
-
 				}
 
 				if ( weights.size() > 0 ) {
@@ -414,6 +410,7 @@ Model LoadStaticModelGLTF( const char* _path ) {
 
 	return model;
 }
+
 
 void LoadAnimations( const char* _path ) {
 	std::string path = _path;
@@ -617,4 +614,45 @@ Texture	LoadCubeMapTexture( const char* path[6] ) {
 	tex.tType = TEXTURE_TYPE_CUBE;
 	tex.textureID = textureID;
 	return tex;
+}
+
+//Assumtion is that the GLTF model is all containde in 1 mesh
+HullInfo LoadHullGLTF( const char* _path ) {
+	std::string path = _path;
+	std::string fileContent = FileContentToString( path );
+	JSON json = JSON::parse( fileContent );
+
+	std::string directory = path.substr( 0, path.find_last_of( "/" ) + 1 );
+	std::string binPath = directory;
+	binPath += json["buffers"][0]["uri"];
+	unsigned int binSize = json["buffers"][0]["byteLength"];
+
+	std::string binContents = FileContentToString( binPath );
+
+	int positionIndex = json["meshes"][0]["primitives"][0]["attributes"]["POSITION"];
+	int indicesIndex = json["meshes"][0]["primitives"][0]["indices"];
+	
+	int posStart = json["bufferViews"][positionIndex]["byteOffset"];
+	int posSize = json["bufferViews"][positionIndex]["byteLength"];
+
+	int indexStart = json["bufferViews"][indicesIndex]["byteOffset"];
+	int indexSize = json["bufferViews"][indicesIndex]["byteLength"];
+
+	int numVeritces = json["accessors"][positionIndex]["count"];
+	int numIndices = json["accessors"][indicesIndex]["count"];
+
+	std::vector<glm::vec3> vertices(numVeritces);
+	std::vector<unsigned short> indices( numIndices );
+	
+	std::string positions = binContents.substr( posStart, posSize );
+	memcpy( vertices.data(), positions.c_str(), numVeritces * sizeof(glm::vec3) );
+
+	std::string indicesBin = binContents.substr( indexStart, indexSize );
+	memcpy( indices.data(), indicesBin.c_str(), numIndices * sizeof( unsigned short) );
+
+	HullInfo hi{};
+	hi.indices = indices;
+	hi.vertexPositions = vertices;
+
+	return hi;
 }

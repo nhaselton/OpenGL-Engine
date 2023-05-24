@@ -149,6 +149,8 @@
     <None Include="res\shaders\shader\Shader.vs" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Physics\Colliders.cpp" />
+    <ClCompile Include="src\Physics\GJK.cpp" />
     <ClCompile Include="src\Physics\Physics.cpp" />
     <ClCompile Include="src\Physics\RigidBody.cpp" />
     <ClCompile Include="src\Renderer\Animation.cpp" />
@@ -170,6 +172,7 @@
     <ClCompile Include="src\Framework\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Physics\GJK.h" />
     <ClInclude Include="src\Physics\Simplex.h" />
     <ClInclude Include="src\Physics\Physics.h" />
     <ClInclude Include="src\Physics\RigidBody.h" />

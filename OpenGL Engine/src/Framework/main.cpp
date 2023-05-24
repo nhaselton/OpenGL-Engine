@@ -15,9 +15,8 @@
 /*
 * doing now
 * do next
-    Draw "crosshair"
-    OOB Line
-    Render: DRAW LINES
+*   Draw Colliders
+* 
 * 
    ====     RENDERING       ======  
          1) Textures (Done)
@@ -64,19 +63,17 @@
             b) interpolate & predict Camera ( Done ) 
         3) Consistent Window size ( Done )
         4) Individual entity animations and non recursive draw ( Done ) 
-        5) basic SAT ( Done )
-        6) line OBB
-        7) AABB and optimized functions
-        6) Broad Phase Checking
+       
         
-        Eventaully
-        1) Heirechy
-
    ======= PHYSICS =========
         1) Rigidbody ( Done )
             1) Mass ( Done )
             2) Velocity (move out of transform)
-        2) Basic Movement and acceleration
+        2) Collisions
+            1) Collider Types
+                i) Sphere
+                ii) Capsule
+                iii) Hull
    ======== GAME  ========
 
    */

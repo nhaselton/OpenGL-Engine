@@ -81,7 +81,7 @@ Mesh::Mesh( std::vector<glm::vec3> positions, std::vector<unsigned short> indice
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, EBO );
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.size()  * sizeof( unsigned short ), indices.data(), GL_STATIC_DRAW );
 
-
+	 
 	numIndices = indices.size();
 	numVertices = positions.size();
 

@@ -20,6 +20,7 @@
 #include "../physics/Colliders.h"
 #include "../physics/Collisions.h"
 #include "../Physics/Physics.h"
+#include "../Physics/RigidBody.h"
 Common::Common() {
 	width = 1280;
 	height = 720;
@@ -55,70 +56,10 @@ void Common::Frame() {
 		while ( accum > tickRate ) {
 			glfwPollEvents();
 			UpdateInput();
-
-
+			PhysicsUpdate();
 			accum -= tickRate;
-
-	//  AABB Continious
-#if 0 
-			for ( int i = 0; i < entites.size(); i++ ) {
-
-				AABB aabbA;
-				aabbA.center = entites[0].boundingBox.center;
-				aabbA.e = entites[0].boundingBox.e;
-
-				AABB aabbB;
-				aabbB.center = entites[1].boundingBox.center;
-				aabbB.e = entites[1].boundingBox.e;
-
-				//Collision Testing
-
-
-				if ( entites[i].rigidBody.velocity != glm::vec3(0) ) {
-
-					ContinuousHitInfo hi = TestContinuousAABB( aabbA, aabbB, entites[0].rigidBody.velocity, entites[1].rigidBody.velocity );
-					if ( !hi.hit ) {
-						std::cout << "HIT\n";
-
-						entites[i].transform.position += entites[i].rigidBody.velocity;
-						entites[i].boundingBox.center = entites[i].transform.Position();
-					}
-					//if hit, calc time and move by that much
-					else {
-						glm::vec3 newVel = hi.time * entites[i].rigidBody.velocity;
-						entites[i].transform.position += newVel;
-						entites[i].boundingBox.center = entites[i].transform.Position();
-						entites[i].rigidBody.velocity = glm::vec3( 0 );
-					}
-				}
-			}
-#endif 
-
-			AABB aabbA;
-			aabbA.center = entites[0].boundingBox.center;
-			aabbA.e = entites[0].boundingBox.e;
-
-			AABB aabbB;
-			aabbB.center = entites[1].boundingBox.center;
-			aabbB.e = entites[1].boundingBox.e;
-
-			entites[0].boundingBox.center = entites[0].transform.position;
-			entites[1].boundingBox.center = entites[1].transform.position;
-			
-			HitInfo he = GJK( aabbA, aabbB );
-			if ( he.hit )
-				std::cout << glm::to_string(he.normal) << ", " << he.depth << std::endl;
-
-
 		}
 		
-		if ( Input::keys[GLFW_KEY_P] )
-			entites[0].boundingBox.u = glm::mat3( 1 );
-
-		glm::vec3 p0 = camera.transform.Position();
-		glm::vec3 p1 = p0 + ( camera.GetForward() * 100.0f );
-
-
 		float interp = ( float ) ( accum / tickRate );
 		renderer->BeginFrame();
 		renderer->DrawFrame( entites, lights, interp );
@@ -126,6 +67,18 @@ void Common::Frame() {
 
 		lastTime = now;
 	}
+}
+
+void Common::PhysicsUpdate() {
+	Entity& a = entites[0];
+	Entity& b = entites[1];
+
+	//HitInfo hi = CheckCollision( &b, &a);
+
+	//HitInfo hi = SphereCollideHull( &a, &b );
+
+	float di = GJK(&a,&b);
+	std::cout << di << std::endl;
 }
 
 
@@ -145,31 +98,24 @@ void Common::InitPhysicsScene() {
 	camera.transform.SetPosition( glm::vec3( 0, 0, -5 ) );
 	camera.transform.SetRotation( glm::vec3( 0, glm::radians( 90.f ), 0 ) );
 
+	Sphere* sphere = new Sphere(glm::vec3(0), .5f);
+	Sphere* sphere2 = new Sphere(glm::vec3(0), .5f);
+	Capsule* capsule = new Capsule( glm::vec3(0,0,0), glm::vec3(0,1,0), 0.5f);
+	Hull* hull = CreateBoxHull( glm::vec3( 0 ), glm::vec3( 1 ) );
+
 	//Box
 	Entity box;
-	box.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/cube.gltf" ) );
+	box.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" ) );
 	box.transform.SetPosition( box1Pos );
-
-	OBB obb;
-	obb.center = glm::vec3( box.transform.Position() );
-	obb.u = box1Rot;
-	obb.e = glm::vec3( 1.0f );
-	box.boundingBox = obb;
-	obb.type = COLLIDER_OBB;
-	//box.rigidBody.AddForce( glm::normalize( glm::vec3( 1, 1, 0 )  ) * .15f );
+	box.rigidBody.collider = hull;
 	entites.push_back( box );
 
 	//Monkey
 	Entity monkey;
 	monkey.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/monkey.gltf" ) );
 	monkey.transform.SetPosition( box2Pos );
+	monkey.rigidBody.collider = hull;
 
-	OBB obb2;
-	obb2.center = glm::vec3( monkey.transform.Position() );
-	obb2.u = glm::mat3( 1.0 );
-	obb2.e = glm::vec3( 1.0f );
-	obb2.type = COLLIDER_OBB;
-	monkey.boundingBox = obb2;
 	entites.push_back( monkey );
 
 	entites[0].rigidBody.velocity = glm::vec3( .2f, 0, 0 );

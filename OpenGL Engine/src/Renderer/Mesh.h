@@ -14,8 +14,9 @@ public:
 	Mesh();
 	Mesh( float* vertices, int numVerts, unsigned int* indices, int numIndices );
 	Mesh( std::vector<Vertex> vertices );
-	Mesh( std::vector<Vertex> positions, std::vector<unsigned short> indices );
-	
+	Mesh( std::vector<glm::vec3> positions, std::vector<unsigned short> indices );
+	Mesh( std::vector<Vertex> vertices, std::vector<unsigned short> indices );
+
 	unsigned int	VBO;
 	unsigned int	VAO;
 	unsigned int	EBO;
@@ -33,8 +34,5 @@ public:
 	void			BindVAO();
 	void			BindEBO();
 
-	int				id; //todo remove ( debug )
-
-private:
-	Mesh( std::vector<glm::vec3> positions, std::vector<unsigned short> indices );
+	int				id; //todo remove ( debug )s
 };

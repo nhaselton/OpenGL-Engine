@@ -16,6 +16,5 @@ public:
 	//priviteize 
 	Transform	transform;
 	EntModel	model;
-	OBB			boundingBox;
 	RigidBody	rigidBody;
 };

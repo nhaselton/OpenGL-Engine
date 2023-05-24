@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "Colliders.h"
 
 class RigidBody {
 public:
@@ -8,7 +9,7 @@ public:
 	glm::vec3	angularVelocity;
 	float		mass;
 	glm::vec3	force;
-
+	Collider*	collider;
 	bool		useGravity;
 public:
 	void		AddForce(glm::vec3 force);
