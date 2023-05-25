@@ -86,11 +86,17 @@ HitInfo TestOBBOBB( Entity& entA, Entity& entB ) {
 	BoxCollider& a = entA.rigidBody.collider;
 	BoxCollider& b = entB.rigidBody.collider;
 
-	glm::mat3 aRotation = entA.rigidBody.collider.u * glm::mat3( glm::quat( entA.transform.rotation ) );
-	glm::mat3 bRotation = entB.rigidBody.collider.u * glm::mat3( glm::quat( entB.transform.rotation ) );
+	//glm::mat3 aRotation = entA.rigidBody.collider.u * glm::mat3( glm::quat( entA.transform.rotation ) );
+	//glm::mat3 bRotation = entB.rigidBody.collider.u * glm::mat3( glm::quat( entB.transform.rotation ) );
+
+	glm::mat3 aRotation = glm::mat3( 1.0 );
+	glm::mat3 bRotation = glm::mat3( 1.0 );
 
 	glm::vec3 aCenter = entA.transform.position + a.c;
 	glm::vec3 bCenter = entB.transform.position + b.c;
+
+	glm::vec3 aHL = entA.transform.scale * a.e;
+	glm::vec3 bHL = entB.transform.scale * b.e;
 
 	//compute the rotation matrix expressing b in a's coordinate space
 	for ( int i = 0; i < 3; i++ )
@@ -113,8 +119,8 @@ HitInfo TestOBBOBB( Entity& entA, Entity& entB ) {
 
 	// Test axes L = A0, L = A1, L = A2
 	for ( int i = 0; i < 3; i++ ) {
-		ra = a.e[i];
-		float rb = b.e[0] * absR[i][0] + b.e[1] * absR[i][1] + b.e[2] * absR[i][2];
+		ra = aHL[i];
+		float rb = bHL[0] * absR[i][0] + bHL[1] * absR[i][1] + bHL[2] * absR[i][2];
 
 		if ( fabs( t[i] ) > ra + rb ) return h;
 
@@ -125,8 +131,8 @@ HitInfo TestOBBOBB( Entity& entA, Entity& entB ) {
 
 	// Test axes L = B0, L = B1, L = B2
 	for ( int i = 0; i < 3; i++ ) {
-		ra = a.e[0] * absR[0][i] + a.e[1] * absR[1][i] + a.e[2] * absR[2][i];
-		rb = b.e[i];
+		ra = aHL[0] * absR[0][i] + aHL[1] * absR[1][i] + aHL[2] * absR[2][i];
+		rb = bHL[i];
 		float _t = t[0] * R[0][i] + t[1] * R[1][i] + t[2] * R[2][i];
 		if ( fabs( _t ) > ra + rb ) return h;
 
@@ -135,76 +141,77 @@ HitInfo TestOBBOBB( Entity& entA, Entity& entB ) {
 	}
 
 	// L = A0 x B0
-	ra = a.e[1] * absR[2][0] + a.e[2] * absR[1][0];
-	rb = b.e[1] * absR[0][2] + b.e[2] * absR[0][1];
+	ra = aHL[1] * absR[2][0] + aHL[2] * absR[1][0];
+	rb = bHL[1] * absR[0][2] + bHL[2] * absR[0][1];
 	_t = t[2] * R[1][0] - t[1] * R[2][0];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[6] = glm::cross( aRotation[0], bRotation[0] );
 	depths[6] = DEPTH;
 
 	// L = A0 x B1
-	ra = a.e[1] * absR[2][1] + a.e[2] * absR[1][1];
-	rb = b.e[0] * absR[0][2] + b.e[2] * absR[0][0];
+	ra = aHL[1] * absR[2][1] + aHL[2] * absR[1][1];
+	rb = bHL[0] * absR[0][2] + bHL[2] * absR[0][0];
 	_t = t[2] * R[1][1] - t[1] * R[2][1];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[7] = glm::cross( aRotation[0], bRotation[1] );
 	depths[7] = DEPTH;
 	// L = A0 x B2
-	ra = a.e[1] * absR[2][2] + a.e[2] * absR[1][2];
-	rb = b.e[0] * absR[0][1] + b.e[1] * absR[0][0];
+	ra = aHL[1] * absR[2][2] + aHL[2] * absR[1][2];
+	rb = bHL[0] * absR[0][1] + bHL[1] * absR[0][0];
 	_t = t[2] * R[1][2] - t[1] * R[2][2];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[8] = glm::cross( aRotation[0], bRotation[2] );
 	depths[8] = DEPTH;
 	// L = A1 x B0
-	ra = a.e[0] * absR[2][0] + a.e[2] * absR[0][0];
-	rb = b.e[1] * absR[1][2] + b.e[2] * absR[1][1];
+	ra = aHL[0] * absR[2][0] + aHL[2] * absR[0][0];
+	rb = bHL[1] * absR[1][2] + bHL[2] * absR[1][1];
 	_t = t[0] * R[2][0] - t[2] * R[0][0];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[9] = glm::cross( aRotation[1], bRotation[0] );
 	depths[9] = DEPTH;
 	// L = A1 x B1
-	ra = a.e[0] * absR[2][1] + a.e[2] * absR[0][1];
-	rb = b.e[0] * absR[1][2] + b.e[2] * absR[1][0];
+	ra = aHL[0] * absR[2][1] + aHL[2] * absR[0][1];
+	rb = bHL[0] * absR[1][2] + bHL[2] * absR[1][0];
 	_t = t[0] * R[2][1] - t[2] * R[0][1];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[10] = glm::cross( aRotation[1], bRotation[1] );
 	depths[10] = DEPTH;
 	// L = A1 x B2
-	ra = a.e[0] * absR[2][2] + a.e[2] * absR[0][2];
-	rb = b.e[0] * absR[1][1] + b.e[1] * absR[1][0];
+	ra = aHL[0] * absR[2][2] + aHL[2] * absR[0][2];
+	rb = bHL[0] * absR[1][1] + bHL[1] * absR[1][0];
 	_t = t[0] * R[2][2] - t[2] * R[0][2];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[11] = glm::cross( aRotation[1], bRotation[2] );
 	depths[11] = DEPTH;
 	// L = A2 x B0
-	ra = a.e[0] * absR[1][0] + a.e[1] * absR[0][0];
-	rb = b.e[1] * absR[2][2] + b.e[2] * absR[2][1];
+	ra = aHL[0] * absR[1][0] + aHL[1] * absR[0][0];
+	rb = bHL[1] * absR[2][2] + bHL[2] * absR[2][1];
 	_t = t[1] * R[0][0] - t[0] * R[1][0];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[12] = glm::cross( aRotation[2], bRotation[0] );
 	depths[12] = DEPTH;
 	// L = A2 x B1
-	ra = a.e[0] * absR[1][1] + a.e[1] * absR[0][1];
-	rb = b.e[0] * absR[2][2] + b.e[2] * absR[2][0];
+	ra = aHL[0] * absR[1][1] + aHL[1] * absR[0][1];
+	rb = bHL[0] * absR[2][2] + bHL[2] * absR[2][0];
 	_t = t[1] * R[0][1] - t[0] * R[1][1];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[13] = glm::cross( aRotation[2], bRotation[1] );
 	depths[13] = DEPTH;// L = A2 x B2
-	ra = a.e[0] * absR[1][2] + a.e[1] * absR[0][2];
-	rb = b.e[0] * absR[2][1] + b.e[1] * absR[2][0];
+	ra = aHL[0] * absR[1][2] + aHL[1] * absR[0][2];
+	rb = bHL[0] * absR[2][1] + bHL[1] * absR[2][0];
 	_t = t[1] * R[0][2] - t[0] * R[1][2];
 	if ( fabs( _t ) > ra + rb ) return h;
 	axes[14] = glm::cross( aRotation[2], bRotation[2] );
 	depths[14] = DEPTH;
 
+	//passed all tests, confirmed hit
+	h.hit = true;
 	h.depth = FLT_MAX;
 	for ( int i = 0; i < 15; i++ ) {
 		if ( depths[i] < h.depth ) {
 			if ( axes[i] != glm::vec3( 0 ) ) {
 				h.depth = depths[i];
 				h.normal = glm::normalize( axes[i] );
-
 				if ( glm::dot( aCenter - bCenter, -h.normal ) > 0.0f )
 					h.normal = -h.normal;
 			}

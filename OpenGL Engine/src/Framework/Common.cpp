@@ -51,8 +51,6 @@ void Common::Frame() {
 		double now = glfwGetTime();
 		accum += ( now - lastTime );
 
-
-
 		while ( accum > tickRate ) {
 			glfwPollEvents();
 			UpdateInput();
@@ -72,13 +70,31 @@ void Common::Frame() {
 void Common::PhysicsUpdate() {
 	Entity& a = entites[0];
 	Entity& b = entites[1];
+	Entity& c = entites[2];
 
-	a.rigidBody.collider.c = a.transform.position;
-	b.rigidBody.collider.c = b.transform.position;
-	HitInfo hi{ 0 };
-	hi = TestOBBOBB( a , b);
+	HitInfo camA{ 0 };
+	camA = TestOBBOBB( camera , a);
 
-	std::cout << hi.depth << std::endl;
+	//realisitcally i want to dot velocity and normal to get dir i believe
+	if ( camA.hit ) {
+		camera.transform.position += camA.normal * camA.depth;
+	}
+	
+	HitInfo camB{ 0 };
+	camB = TestOBBOBB( camera, b );
+
+	if ( camB.hit ) {
+		camera.transform.position += camB.normal * camB.depth;
+	}
+
+
+	HitInfo floor{ 0 };
+	floor = TestOBBOBB( camera, c );
+
+	if ( floor.hit ) {
+		camera.transform.position += floor.normal * floor.depth;
+		std::cout << "HIT";
+	}
 }
 
 
@@ -109,6 +125,14 @@ void Common::InitPhysicsScene() {
 	monkey.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/monkey.gltf" ) );
 	monkey.transform.SetPosition( box2Pos );
 	entites.push_back( monkey );
+
+
+	Entity floor;
+	floor.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" ) );
+	floor.transform.scale = glm::vec3( 10.0f, .1f, 10.0f );
+	floor.transform.position = glm::vec3( 0, -5, 0 );
+	entites.push_back( floor );
+
 
 	entites[0].rigidBody.velocity = glm::vec3( .2f, 0, 0 );
 	entites[1].rigidBody.velocity = glm::vec3( 0, 0, 0 );
@@ -177,6 +201,7 @@ void Common::InitGraphicsScene() {
 	e2.model.GetRenderModel()->isStatic = true;
 	e2.model.CalculateNodesR( &e2.model.GetRenderModel()->nodes[e2.model.GetRenderModel()->rootNode], glm::mat4( 1.0 ) );
 	entites.push_back( e2 );
+
 
 	//Load Skybox
 	//ResourceManager::Get().GetTexture( "res/textures/skybox/back.jpg" );

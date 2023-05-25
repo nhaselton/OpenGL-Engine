@@ -248,13 +248,15 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 
 
 	for ( int i = 0; i < entities.size(); i++ ) {
-		Model* model = entities[i].model.GetRenderModel();
-		Shader* shader = ( model->isStatic ) ? staticShader : dynamicShader;
-		shader->Use();
+		if ( entities[i].model.GetRenderModel() != nullptr ) {
+			Model* model = entities[i].model.GetRenderModel();
+			Shader* shader = ( model->isStatic ) ? staticShader : dynamicShader;
+			shader->Use();
+			DrawEntity( shader, entities[i] , true);
+		}
 		//if ( !model->isStatic )
 		//	ComputeHierarchyR( ResourceManager::Get().GetAnimation("idle"), index, &model->nodes[model->rootNode], glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
 
-		DrawEntity( shader, entities[i] , true);
 		//DrawModelR( shader, model, &model->nodes[model->rootNode], true , glm::scale(glm::mat4(1.0),glm::vec3(.5f)));
 	}
 
@@ -264,8 +266,11 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 			lights[2].direction = camera->GetForward();
 		}
 	}
+
 	for ( int i = 0 ;i < entities.size(); i++ )
 		DrawCollider( entities[i] );
+	DrawCollider( *camera );
+
 }
 
 void Renderer::DrawSkyBox() {
@@ -692,30 +697,8 @@ void Renderer::renderQuad() {
 	glBindVertexArray( 0 );
 }
 
-#if 0
-void Renderer::DrawOBB( Entity& entity ) {
-	Model* model = ResourceManager::Get().GetModel( "res/models/gltf/cube.gltf" );
-	glm::mat4 translation = glm::translate( glm::mat4(1.0), entity.boundingBox.center );
-	glm::mat4 rot = entity.boundingBox.u;
-	glm::mat4 scale = glm::scale(glm::mat4(1.0), entity.boundingBox.e );
-	glm::mat4 modelT = translation * rot * scale;
-	model->meshes[0].BindVAO();
-	
-	
-	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	glDepthFunc( GL_LEQUAL );
-	boundingBoxShader->Use();
-	boundingBoxShader->SetMat4( "model", modelT );
-	boundingBoxShader->SetMat4( "projection", projection );
-	boundingBoxShader->SetMat4( "view", camera->GetView() );
-	glDrawElements( GL_TRIANGLES, model->meshes[0].numIndices, GL_UNSIGNED_SHORT, 0 );
-	glDepthFunc( GL_LESS );
-	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-}
-#endif
-
-
 void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
+
 	Model* renderModel = ent.model.GetRenderModel();
 
 	for ( int i = 0; i < renderModel->nodes.size(); i++ ) {
@@ -747,7 +730,7 @@ void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
 
 void Renderer::DrawCollider( Entity& entity ) {
 	BoxCollider& bc = entity.rigidBody.collider;
-	
+
 	glm::vec3 pos = entity.transform.position + bc.c;
 	glm::vec3 scale = entity.transform.scale * (bc.e );//scale * (halfwidth*2)
 

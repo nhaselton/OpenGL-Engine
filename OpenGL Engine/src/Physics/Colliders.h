@@ -4,14 +4,14 @@ class BoxCollider {
 public:
 	BoxCollider() {
 		c = glm::vec3( 0 );
-		e = glm::vec3(0.5f);
-		glm::mat3 u = glm::mat3( 1.0 );
+		e = glm::vec3(1.0f);
+		u = glm::mat3( 1.0 );
 	}
 	
 	BoxCollider( glm::vec3 c, glm::vec3 hl ) {
 		this->c = c;
 		this->e = hl;
-		glm::mat3 u = glm::mat3( 1.0 );
+		u = glm::mat3( 1.0 );
 	}
 
 	glm::vec3 c; // local space (apply entity transformation) 
