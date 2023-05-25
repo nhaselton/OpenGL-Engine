@@ -9,7 +9,7 @@ public:
 	glm::vec3	angularVelocity;
 	float		mass;
 	glm::vec3	force;
-	Collider*	collider;
+	BoxCollider	collider;
 	bool		useGravity;
 public:
 	void		AddForce(glm::vec3 force);

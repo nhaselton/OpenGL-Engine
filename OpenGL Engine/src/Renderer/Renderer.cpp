@@ -15,6 +15,7 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
 #include "../Physics/Collisions.h"
+#include "../Physics/Colliders.h"
 int index;
 
 //cube vertiecs for a skybox
@@ -745,89 +746,22 @@ void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
 }
 
 void Renderer::DrawCollider( Entity& entity ) {
-	if ( !entity.rigidBody.collider )
-		return;
+	BoxCollider& bc = entity.rigidBody.collider;
+	
+	glm::vec3 pos = entity.transform.position + bc.c;
+	glm::vec3 scale = entity.transform.scale * (bc.e );//scale * (halfwidth*2)
 
-	switch ( entity.rigidBody.collider->colliderType ) {
-	case COLLIDER_CAPSULE:
-		DrawCapsule( entity );
-		break;
-	case COLLIDER_HULL:
-		DrawHull( entity );
-		break;
-	case COLLIDER_SPHERE:
-		DrawSphere( entity );
-		break;
-	}
-}
+	glm::mat4 trs = glm::translate( glm::mat4(1.0), pos );
+	trs = glm::scale( trs, scale );
 
-void Renderer::DrawSphere( Entity& entity ) {
+	Mesh& mesh = ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" )->meshes[0];
+	mesh.BindVAO();
 	primShader->Use();
 	primShader->SetMat4( "view", camera->GetView() );
 	primShader->SetMat4( "projection", projection );
-	
-	Sphere* collider = (Sphere*) entity.rigidBody.collider;
-
-	glm::mat4 trs;
-	//note not parent position, not what it uses for physics ceck but since it should reset we dont need to use ti
-	trs = glm::translate( glm::mat4( 1.0 ), glm::vec3( collider->c) + entity.transform.position);
-	trs = glm::scale( trs, glm::vec3( collider->r ) );
 	primShader->SetMat4( "model", trs );
-	
-	Mesh* mesh = &sphere->meshes[0];
-	mesh->BindVAO();
 
 	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	
-	if ( mesh->numIndices != 0 ) 
-		glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
-	else 
-		glDrawArrays( GL_TRIANGLES, 0, mesh->numVertices );
-	
-	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-}
-
-void Renderer::DrawCapsule( Entity & entity ) {
-	primShader->Use();
-	primShader->SetMat4( "view", camera->GetView() );
-	primShader->SetMat4( "projection", projection );
-
-	Capsule* collider = ( Capsule* ) entity.rigidBody.collider;
-
-	Mesh* mesh = &sphere->meshes[0];
-	mesh->BindVAO();
-	glm::mat4 trs;
-
-	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	
-	trs = glm::translate( glm::mat4( 1.0 ), glm::vec3( collider->c1 ) + entity.transform.position );
-	trs = glm::scale( trs, glm::vec3( collider->r ) );
-	primShader->SetMat4( "model", trs );
-	glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
-
-	trs = glm::translate( glm::mat4( 1.0 ), glm::vec3( collider->c2 ) + entity.transform.position );
-	trs = glm::scale( trs, glm::vec3( collider->r ) );
-	primShader->SetMat4( "model", trs );
-	glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
-
-
-	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-}
-
-void Renderer::DrawHull( Entity& entity ) {
-	Hull* hull = (Hull*) entity.rigidBody.collider;
-	Mesh* m = hull->drawMesh;
-	m->BindVAO();
-
-	glm::mat4 trs = glm::translate( glm::mat4( 1.0 ), entity.transform.position + hull->c );
-	trs = glm::scale( trs , entity.transform.scale );
-
-	primShader->Use();
-	primShader->SetMat4( "model", trs );
-	primShader->SetMat4( "view", camera->GetView() );
-	primShader->SetMat4( "projection", projection );
-
-	glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-	glDrawElements( GL_TRIANGLES, m->numIndices, GL_UNSIGNED_SHORT, 0 );
+	glDrawElements( GL_TRIANGLES, mesh.numIndices, GL_UNSIGNED_SHORT, 0 );
 	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 }

@@ -73,12 +73,12 @@ void Common::PhysicsUpdate() {
 	Entity& a = entites[0];
 	Entity& b = entites[1];
 
-	//HitInfo hi = CheckCollision( &b, &a);
+	a.rigidBody.collider.c = a.transform.position;
+	b.rigidBody.collider.c = b.transform.position;
+	HitInfo hi{ 0 };
+	hi = TestOBBOBB( a , b);
 
-	//HitInfo hi = SphereCollideHull( &a, &b );
-
-	float di = GJK(&a,&b);
-	std::cout << di << std::endl;
+	std::cout << hi.depth << std::endl;
 }
 
 
@@ -98,24 +98,16 @@ void Common::InitPhysicsScene() {
 	camera.transform.SetPosition( glm::vec3( 0, 0, -5 ) );
 	camera.transform.SetRotation( glm::vec3( 0, glm::radians( 90.f ), 0 ) );
 
-	Sphere* sphere = new Sphere(glm::vec3(0), .5f);
-	Sphere* sphere2 = new Sphere(glm::vec3(0), .5f);
-	Capsule* capsule = new Capsule( glm::vec3(0,0,0), glm::vec3(0,1,0), 0.5f);
-	Hull* hull = CreateBoxHull( glm::vec3( 0 ), glm::vec3( 1 ) );
-
 	//Box
 	Entity box;
 	box.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" ) );
 	box.transform.SetPosition( box1Pos );
-	box.rigidBody.collider = hull;
 	entites.push_back( box );
 
 	//Monkey
 	Entity monkey;
 	monkey.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/monkey.gltf" ) );
 	monkey.transform.SetPosition( box2Pos );
-	monkey.rigidBody.collider = hull;
-
 	entites.push_back( monkey );
 
 	entites[0].rigidBody.velocity = glm::vec3( .2f, 0, 0 );

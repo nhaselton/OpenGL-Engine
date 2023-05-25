@@ -1,4 +1,6 @@
+#include <iostream>
 #include "glm/glm.hpp"
+#include "glm/gtx/string_cast.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "RigidBody.h"
 #include "Colliders.h"
@@ -16,167 +18,11 @@ float maxf( float a, float b ) {
 	return b;
 }
 
-//todo there is a better way than nested if elses
-HitInfo CheckCollision( Entity* ra, Entity* rb) {
-	Collider* a = ra->rigidBody.collider;
-	Collider* b = rb->rigidBody.collider;
-	if ( a == nullptr || b == nullptr ) {
-		std::cout << "Null collider";
-		HitInfo h{ 0 };
-		return h;
-	}
-
-	return SphereCollideCapsule( ra, rb );
-
-	if ( a->colliderType == COLLIDER_SPHERE ) {
-		if ( b->colliderType == COLLIDER_SPHERE )
-			return SphereCollideSphere( ra, rb );
-		
-		if ( b->colliderType == COLLIDER_CAPSULE)
-			return SphereCollideCapsule( ra, rb );
-	}
-
-	if ( b->colliderType == COLLIDER_SPHERE ) {
-		if ( a->colliderType == COLLIDER_SPHERE )
-			return SphereCollideSphere( rb, ra );
-
-		if ( a->colliderType == COLLIDER_CAPSULE )
-			return SphereCollideCapsule( rb, ra );
-	}
-
-}
-
-
-HitInfo SphereCollideSphere( Entity* e1, Entity* e2 ) {
-	HitInfo hi{ 0 };
-
-	Sphere* a = (Sphere*) e1->rigidBody.collider;
-	Sphere* b = (Sphere*) e2->rigidBody.collider;
-	
-
-	//|C2-C1| - r1 - r2 <= 0
-	glm::vec3 c1 = e1->transform.position + a->c;
-	glm::vec3 c2 = e2->transform.position + b->c ;
-	float distance = glm::length( c2 - c1 ) - a->r - b->r;
-
-	//todo figure out how to make middle of 2 surface points (not center) slide 40
-	if ( distance <= 0) {
-		hi.numContacts = 1;
-		hi.contactPoints[0] = c2 - c1;
-		hi.normal = glm::normalize( c2 - c1 );
-		hi.depth = distance;
-	}
-
-	return hi;
-}
-
-
-//TODO REST OF THIS
-HitInfo SphereCollideCapsule( Entity* s, Entity* c ) {
-	HitInfo hi{ 0 };
-	Sphere* sphere = ( Sphere* ) s->rigidBody.collider;
-	Capsule* capsule = ( Capsule* ) c->rigidBody.collider;
-
-	glm::vec3 c1 = capsule->c1 + c->transform.position;
-	glm::vec3 c2 = capsule->c2 + c->transform.position;
-
-	//Top
-	glm::vec3 cS = s->transform.position + sphere->c;
-	glm::vec3 L = ClosestPointOnSegment( c1, c2, cS );
-	
-	float distance = glm::length( cS - L ) - sphere->r - capsule->r;
-
-	if ( distance <= 0 ) {
-		hi.numContacts = 1;
-		hi.depth = distance;
-		hi.normal = ( glm::normalize( cS - L ) );
-		hi.contactPoints[0] = ( cS - L );
-	}
-	
-
-	return hi;
-}	
-
 glm::vec3 ClosestPointOnSegment( glm::vec3 a, glm::vec3 b, glm::vec3 c ) {
 	glm::vec3 AB = b - a;
 	float t = glm::dot( c - a, AB ) / dot( AB, AB );
 	return a + minf( maxf( t, 0.0f ), 1.0f ) * AB;
 }
-
-HitInfo SphereCollideHull( Entity* sp, Entity* hl ) {
-	HitInfo hi{ 0 };
-	
-	Hull* h = ( Hull* ) sp->rigidBody.collider;
-	Sphere* s = ( Sphere* ) hl->rigidBody.collider;
-	glm::vec3 spherePos = s->c + sp->transform.position;
-	
-	glm::vec3 L = ClosestPointOnHull( h, hl->transform.position , spherePos );
-	float offset = glm::length( spherePos - L ) - s->r;
-
-	if ( offset <= 0 ) {
-		hi.numContacts = 1;
-	}
-	return hi;
-}
-
-float DistPointSegmentSq( glm::vec3 a, glm::vec3 b, glm::vec3 c ) {
-	glm::vec3 ab = b - a;
-	glm::vec3 ac = c - a;
-	glm::vec3 bc = c - b;
-	float e = glm::dot( ac, ab );
-	if ( e <= 0.0f ) 
-		return dot( ac, ac );
-
-	float f = glm::dot( ab, ab );
-
-	if ( e > f )
-		return glm::dot( bc, bc );
-
-	return glm::dot( ac, ac ) - e * e / f;
-}
-
-glm::vec3 ClosestPointOnHull( Hull* hull,glm::vec3 hullOffset, glm::vec3 p ) {
-	//For each face
-	std::vector<unsigned short>& ind = hull->indices;
-
-	float shortestDist = FLT_MAX;
-	glm::vec3 l1, l2, l3;
-	for ( int i = 0 ;i < hull->indices.size(); i+=3 ){
-		//check 3 lines of face for closest distance to point, record closest to do calculations on after	
-		glm::vec3 v1 = hull->vertices[hull->indices[i]] + hull->c + hullOffset;
-		glm::vec3 v2 = hull->vertices[hull->indices[i+1]] + hull->c + hullOffset;
-		glm::vec3 v3 = hull->vertices[hull->indices[i+2]] + hull->c + hullOffset;
-		float a = DistPointSegmentSq( v1 , v2 , p );
-		float b = DistPointSegmentSq( v2 , v3 , p );
-		float c = DistPointSegmentSq( v3 , v1 , p );
-		
-		if ( a < shortestDist ) {
-			shortestDist = a;
-			l1 = v1;
-			l2 = v2;
-			l3 = v3;
-		}
-
-		if ( b < shortestDist ) {
-			shortestDist = b;
-			l1 = v1;
-			l2 = v2;
-			l3 = v3;
-		}
-
-		if ( c < shortestDist ) {
-			shortestDist = c;
-			l1 = v1;
-			l2 = v2;
-			l3 = v3;
-		}
-	}
-
-	glm::vec3 closestPoint = ClosestPointOnTriangle( l1, l2, l3, p );
-
-	return closestPoint;
-}
-
 
 glm::vec3 ClosestPointOnTriangle( glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 p ) {
 	glm::vec3 ab = b - a;
@@ -228,8 +74,142 @@ glm::vec3 ClosestPointOnTriangle( glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::ve
 	return a + ab * v + ac * w;
 }
 
-glm::vec3 ClosestPointOnTetraherdon( glm::vec3 l1, glm::vec3 l2, glm::vec3 l3, glm::vec3 l4, glm::vec3 p ) {
-	std::cout << "[ERROR]havent implemented closestpointontetrahedron";
+HitInfo TestOBBOBB( Entity& entA, Entity& entB ) {
+	HitInfo h{ 0 };
+	float ra;
+	float rb;
+	float _t;
+	glm::vec3 axes[15];
+	float depths[15];
+	glm::mat3 R( 1.0f ), absR( 1.0f );
 
-	return glm::vec3(-1);
+	BoxCollider& a = entA.rigidBody.collider;
+	BoxCollider& b = entB.rigidBody.collider;
+
+	glm::mat3 aRotation = entA.rigidBody.collider.u * glm::mat3( glm::quat( entA.transform.rotation ) );
+	glm::mat3 bRotation = entB.rigidBody.collider.u * glm::mat3( glm::quat( entB.transform.rotation ) );
+
+	glm::vec3 aCenter = entA.transform.position + a.c;
+	glm::vec3 bCenter = entB.transform.position + b.c;
+
+	//compute the rotation matrix expressing b in a's coordinate space
+	for ( int i = 0; i < 3; i++ )
+		for ( int j = 0; j < 3; j++ )
+			R[i][j] = glm::dot( aRotation[i], bRotation[j] );
+
+	//translaiton vector
+	glm::vec3 t = bCenter - aCenter;
+	//translate into A's coord frame
+	t = glm::vec3( glm::dot( t, aRotation[0] ), glm::dot( t, aRotation[1] ), glm::dot( t, aRotation[2] ) );
+
+	//Compute common sub expressions, add epsilon to ged rid of NULL cross products on parallel lines
+	for ( int i = 0; i < 3; i++ )
+		for ( int j = 0; j < 3; j++ ) {
+			absR[i][j] = fabs( R[i][j] ) + FLT_EPSILON;
+		}
+
+#define DEPTH  ra + rb - fabs(_t)//ra + rb - _t
+
+
+	// Test axes L = A0, L = A1, L = A2
+	for ( int i = 0; i < 3; i++ ) {
+		ra = a.e[i];
+		float rb = b.e[0] * absR[i][0] + b.e[1] * absR[i][1] + b.e[2] * absR[i][2];
+
+		if ( fabs( t[i] ) > ra + rb ) return h;
+
+		axes[i] = aRotation[i];
+		depths[i] = ra + rb - fabs( t[i] );//fabs(t[i]) - (ra + rb);//ra + rb - t[i];
+	}
+
+
+	// Test axes L = B0, L = B1, L = B2
+	for ( int i = 0; i < 3; i++ ) {
+		ra = a.e[0] * absR[0][i] + a.e[1] * absR[1][i] + a.e[2] * absR[2][i];
+		rb = b.e[i];
+		float _t = t[0] * R[0][i] + t[1] * R[1][i] + t[2] * R[2][i];
+		if ( fabs( _t ) > ra + rb ) return h;
+
+		axes[i + 3] = bRotation[i];
+		depths[i + 3] = DEPTH;//ra + rb - t[i];
+	}
+
+	// L = A0 x B0
+	ra = a.e[1] * absR[2][0] + a.e[2] * absR[1][0];
+	rb = b.e[1] * absR[0][2] + b.e[2] * absR[0][1];
+	_t = t[2] * R[1][0] - t[1] * R[2][0];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[6] = glm::cross( aRotation[0], bRotation[0] );
+	depths[6] = DEPTH;
+
+	// L = A0 x B1
+	ra = a.e[1] * absR[2][1] + a.e[2] * absR[1][1];
+	rb = b.e[0] * absR[0][2] + b.e[2] * absR[0][0];
+	_t = t[2] * R[1][1] - t[1] * R[2][1];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[7] = glm::cross( aRotation[0], bRotation[1] );
+	depths[7] = DEPTH;
+	// L = A0 x B2
+	ra = a.e[1] * absR[2][2] + a.e[2] * absR[1][2];
+	rb = b.e[0] * absR[0][1] + b.e[1] * absR[0][0];
+	_t = t[2] * R[1][2] - t[1] * R[2][2];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[8] = glm::cross( aRotation[0], bRotation[2] );
+	depths[8] = DEPTH;
+	// L = A1 x B0
+	ra = a.e[0] * absR[2][0] + a.e[2] * absR[0][0];
+	rb = b.e[1] * absR[1][2] + b.e[2] * absR[1][1];
+	_t = t[0] * R[2][0] - t[2] * R[0][0];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[9] = glm::cross( aRotation[1], bRotation[0] );
+	depths[9] = DEPTH;
+	// L = A1 x B1
+	ra = a.e[0] * absR[2][1] + a.e[2] * absR[0][1];
+	rb = b.e[0] * absR[1][2] + b.e[2] * absR[1][0];
+	_t = t[0] * R[2][1] - t[2] * R[0][1];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[10] = glm::cross( aRotation[1], bRotation[1] );
+	depths[10] = DEPTH;
+	// L = A1 x B2
+	ra = a.e[0] * absR[2][2] + a.e[2] * absR[0][2];
+	rb = b.e[0] * absR[1][1] + b.e[1] * absR[1][0];
+	_t = t[0] * R[2][2] - t[2] * R[0][2];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[11] = glm::cross( aRotation[1], bRotation[2] );
+	depths[11] = DEPTH;
+	// L = A2 x B0
+	ra = a.e[0] * absR[1][0] + a.e[1] * absR[0][0];
+	rb = b.e[1] * absR[2][2] + b.e[2] * absR[2][1];
+	_t = t[1] * R[0][0] - t[0] * R[1][0];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[12] = glm::cross( aRotation[2], bRotation[0] );
+	depths[12] = DEPTH;
+	// L = A2 x B1
+	ra = a.e[0] * absR[1][1] + a.e[1] * absR[0][1];
+	rb = b.e[0] * absR[2][2] + b.e[2] * absR[2][0];
+	_t = t[1] * R[0][1] - t[0] * R[1][1];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[13] = glm::cross( aRotation[2], bRotation[1] );
+	depths[13] = DEPTH;// L = A2 x B2
+	ra = a.e[0] * absR[1][2] + a.e[1] * absR[0][2];
+	rb = b.e[0] * absR[2][1] + b.e[1] * absR[2][0];
+	_t = t[1] * R[0][2] - t[0] * R[1][2];
+	if ( fabs( _t ) > ra + rb ) return h;
+	axes[14] = glm::cross( aRotation[2], bRotation[2] );
+	depths[14] = DEPTH;
+
+	h.depth = FLT_MAX;
+	for ( int i = 0; i < 15; i++ ) {
+		if ( depths[i] < h.depth ) {
+			if ( axes[i] != glm::vec3( 0 ) ) {
+				h.depth = depths[i];
+				h.normal = glm::normalize( axes[i] );
+
+				if ( glm::dot( aCenter - bCenter, -h.normal ) > 0.0f )
+					h.normal = -h.normal;
+			}
+		}
+	}
+	h.hit = true;
+	return h;
 }
