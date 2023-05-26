@@ -180,7 +180,7 @@ void Renderer::BeginFrame() {
 
 }
 
-void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights, double interp ) {
+void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lights ) {
 	ImGui::Begin( "test" );
 	ImGui::SliderFloat3( "pos", &entities[0].transform.position.x, -5, 5);
 	ImGui::End();
@@ -202,7 +202,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 
 	DrawLights(lights,entities);
 
-	glm::mat4 view = camera->GetInterpolatedView( interp );
+	glm::mat4 view = camera->GetView();
 
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
 	glViewport( 0, 0, window->GetWidth(), window->GetHeight());
@@ -269,7 +269,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 
 	for ( int i = 0 ;i < entities.size(); i++ )
 		DrawCollider( entities[i] );
-	DrawCollider( *camera );
+	//DrawCollider( *camera );
 
 }
 
@@ -732,9 +732,13 @@ void Renderer::DrawCollider( Entity& entity ) {
 	BoxCollider& bc = entity.rigidBody.collider;
 
 	glm::vec3 pos = entity.transform.position + bc.c;
-	glm::vec3 scale = entity.transform.scale * (bc.e );//scale * (halfwidth*2)
+	glm::vec3 scale = entity.transform.scale * ( bc.e );//scale * (halfwidth*2)
 
+	glm::mat3 rM3 = glm::mat3( glm::quat( entity.transform.rotation ) ) * entity.rigidBody.collider.u;
+	glm::mat4 rotation = glm::mat4( rM3 );
+	
 	glm::mat4 trs = glm::translate( glm::mat4(1.0), pos );
+	trs *= rotation;
 	trs = glm::scale( trs, scale );
 
 	Mesh& mesh = ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" )->meshes[0];

@@ -86,11 +86,11 @@ HitInfo TestOBBOBB( Entity& entA, Entity& entB ) {
 	BoxCollider& a = entA.rigidBody.collider;
 	BoxCollider& b = entB.rigidBody.collider;
 
-	//glm::mat3 aRotation = entA.rigidBody.collider.u * glm::mat3( glm::quat( entA.transform.rotation ) );
-	//glm::mat3 bRotation = entB.rigidBody.collider.u * glm::mat3( glm::quat( entB.transform.rotation ) );
+	glm::mat3 aRotation = entA.rigidBody.collider.u * glm::mat3( glm::quat( entA.transform.rotation ) );
+	glm::mat3 bRotation = entB.rigidBody.collider.u * glm::mat3( glm::quat( entB.transform.rotation ) );
 
-	glm::mat3 aRotation = glm::mat3( 1.0 );
-	glm::mat3 bRotation = glm::mat3( 1.0 );
+	//aRotation = glm::mat3( 1.0);
+	//bRotation = glm::mat3( 1.0);
 
 	glm::vec3 aCenter = entA.transform.position + a.c;
 	glm::vec3 bCenter = entB.transform.position + b.c;

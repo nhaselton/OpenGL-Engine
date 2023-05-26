@@ -33,7 +33,7 @@ public:
 	Renderer();
 	void			Init(class Window* window , Camera* camera);
 	void			BeginFrame();
-	void			DrawFrame(std::vector<Entity>& meshes, std::vector<Light>& lights, double interp );
+	void			DrawFrame(std::vector<Entity>& meshes, std::vector<Light>& lights );
 	void			EndFrame();
 
 private:

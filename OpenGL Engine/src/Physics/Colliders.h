@@ -14,6 +14,7 @@ public:
 		u = glm::mat3( 1.0 );
 	}
 
+	bool isTrigger = false;
 	glm::vec3 c; // local space (apply entity transformation) 
 	glm::vec3 e; // halfwidth
 	glm::mat3 u;

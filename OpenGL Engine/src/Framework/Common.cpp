@@ -51,16 +51,17 @@ void Common::Frame() {
 		double now = glfwGetTime();
 		accum += ( now - lastTime );
 
-		while ( accum > tickRate ) {
+	//	while ( accum > tickRate ) {
 			glfwPollEvents();
 			UpdateInput();
 			PhysicsUpdate();
 			accum -= tickRate;
-		}
+		//}
 		
-		float interp = ( float ) ( accum / tickRate );
+		//float interp = ( float ) ( accum / tickRate );
+		float interp = 1;
 		renderer->BeginFrame();
-		renderer->DrawFrame( entites, lights, interp );
+		renderer->DrawFrame( entites, lights);
 		renderer->EndFrame();
 
 		lastTime = now;
@@ -71,7 +72,9 @@ void Common::PhysicsUpdate() {
 	Entity& a = entites[0];
 	Entity& b = entites[1];
 	Entity& c = entites[2];
-
+	
+	glm::vec3 r = camera.transform.rotation;
+	camera.transform.rotation = glm::vec3( 0 );
 	HitInfo camA{ 0 };
 	camA = TestOBBOBB( camera , a);
 
@@ -93,8 +96,8 @@ void Common::PhysicsUpdate() {
 
 	if ( floor.hit ) {
 		camera.transform.position += floor.normal * floor.depth;
-		std::cout << "HIT";
 	}
+	camera.transform.rotation = r;
 }
 
 
@@ -104,15 +107,14 @@ void Common::InitPhysicsScene() {
 
 	glm::mat3 box1Rot( 1.0 );
 	float t = glm::radians( 45.0f );
-#if 0
 	box1Rot[0] = glm::vec3( -sinf( t ), cosf( t ), 0 );
 	box1Rot[1] = glm::vec3( cos( t ), sinf( t ), 0 );
 	box1Rot[2] = glm::vec3( 0, 0, 1 );
-#endif
 
 
-	camera.transform.SetPosition( glm::vec3( 0, 0, -5 ) );
+	camera.transform.SetPosition( glm::vec3( 0, 1, -5 ) );
 	camera.transform.SetRotation( glm::vec3( 0, glm::radians( 90.f ), 0 ) );
+	camera.rigidBody.collider.e = glm::vec3( .5f, 1.f, .5f );
 
 	//Box
 	Entity box;
@@ -130,7 +132,9 @@ void Common::InitPhysicsScene() {
 	Entity floor;
 	floor.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" ) );
 	floor.transform.scale = glm::vec3( 10.0f, .1f, 10.0f );
-	floor.transform.position = glm::vec3( 0, -5, 0 );
+	floor.transform.position = glm::vec3( 0, 0, 0 );
+	//floor.transform.rotation = glm::vec3( 0, 0, 45.0f );
+
 	entites.push_back( floor );
 
 
@@ -147,36 +151,37 @@ void Common::UpdateInput() {
 	camera.rigidBody.angularVelocity = glm::vec3( 0 );
 
 	if ( Input::keys[GLFW_KEY_W] ) {
-		camera.rigidBody.velocity += ( camera.GetForward() * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( camera.GetForward() * glm::vec3( .1f ) ) * .01f;
 	}
 
 	if ( Input::keys[GLFW_KEY_S] ) {
-		camera.rigidBody.velocity += ( -camera.GetForward() * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( -camera.GetForward() * glm::vec3( .1f ) ) * .01f;
 	}
 
 	if ( Input::keys[GLFW_KEY_A] ) {
-		camera.rigidBody.velocity += ( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) ) * .01f;
 	}
 	if ( Input::keys[GLFW_KEY_D] ) {
-		camera.rigidBody.velocity += ( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) );
+		camera.rigidBody.velocity += ( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) ) * .01f;
 	}
 
 	if ( Input::keys[GLFW_KEY_LEFT] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( 0, -.5f, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( 0, -.5f, 0.0f ) * glm::vec3( .1f ) ) * .01f;
 	}
 
 	if ( Input::keys[GLFW_KEY_RIGHT] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( 0, .5f, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( 0, .5f, 0.0f ) * glm::vec3( .1f ) ) * .01f;
 	}
 
 	if ( Input::keys[GLFW_KEY_DOWN] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( -.5f, 0, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( -.5f, 0, 0.0f ) * glm::vec3( .1f ) ) * .01f;
 	}
 
 	if ( Input::keys[GLFW_KEY_UP] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( .5f, 0, 0.0f ) * glm::vec3( .1f ) );
+		camera.rigidBody.angularVelocity += ( glm::vec3( .5f, 0, 0.0f ) * glm::vec3( .1f ) ) * .01f;
 	}
 
+	camera.transform.position.y -= 0.25f;
 	camera.transform.position += camera.rigidBody.velocity;
 	camera.transform.rotation += camera.rigidBody.angularVelocity;
 }
