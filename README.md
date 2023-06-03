@@ -17,6 +17,8 @@ Renderer
 1) SAT collision detection which returns hit normal & depth for collision resolution
 2) OOBs, with a way to visualize them in the renderer
 note: shortly after starting physics i realzied i would need to rewrite most of the non renderering code, so i plan to just start a new project for it!
-[Low Res PCF filtering (needs work) ](https://github.com/nhaselton/OpenGL-Engine/assets/56526077/ad0d6644-edc2-479f-a364-15c97a76fb2d)
-![Any Color Lights](https://github.com/nhaselton/OpenGL-Engine/assets/56526077/4ae349ab-ed1d-4c25-b05c-0f84a6e42986)
-![Normal Maps](https://github.com/nhaselton/OpenGL-Engine/assets/56526077/923bf03f-092c-46c2-b32b-489d44c1a9c4)
+
+
+[](https://github.com/nhaselton/OpenGL-Engine/assets/56526077/ad0d6644-edc2-479f-a364-15c97a76fb2d)
+[](https://github.com/nhaselton/OpenGL-Engine/assets/56526077/4ae349ab-ed1d-4c25-b05c-0f84a6e42986)
+[](https://github.com/nhaselton/OpenGL-Engine/assets/56526077/923bf03f-092c-46c2-b32b-489d44c1a9c4)
