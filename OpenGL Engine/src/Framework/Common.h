@@ -25,9 +25,9 @@ private:
 
 	unsigned int		width;
 	unsigned int		height;
+	float				camSpeed;
 
-	//Timing for tik system
-	double				lastTime;
-	double				accum;
-	double				tickRate;
+	float				lastTime;
+	float				deltaTime;
+
 };

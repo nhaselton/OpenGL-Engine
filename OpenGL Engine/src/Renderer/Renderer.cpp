@@ -36,7 +36,7 @@ Renderer::Renderer() {
 	showSpot= true;
 	showPoint = true;
 
-	fullBright = true;
+	fullBright = false;
 }
 
 //const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
@@ -104,7 +104,7 @@ void Renderer::Init( Window* window, Camera* camera ) {
 		"res/textures/skybox/front.jpg",
 		"res/textures/skybox/back.jpg" };
 
-	//skybox = CreateSkyBox( paths );
+	skybox = CreateSkyBox( paths );
 
 	cube = ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" );
 	capsule = ResourceManager::Get().GetModel( "res/models/gltf/prim/capsule.gltf" );
@@ -205,7 +205,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 	glm::mat4 view = camera->GetView();
 
 	glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-	glViewport( 0, 0, window->GetWidth(), window->GetHeight());
+	glViewport( 0, 0, 1280, 720);
 	glClearColor( 0.2f, 0.3f, 0.3f, 1.0f );
 	glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT );
 
@@ -214,6 +214,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 		debugDepthQuadShader->SetFloat( "near_plane", 1 );
 		debugDepthQuadShader->SetInt( "depthMap", 15 );
 		debugDepthQuadShader->SetFloat( "far_plane", 25 );
+		debugDepthQuadShader->SetMat4( "scale", glm::mat4( 1.0 ) );
 		renderQuad();
 		return;
 	}
@@ -254,10 +255,7 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 			shader->Use();
 			DrawEntity( shader, entities[i] , true);
 		}
-		//if ( !model->isStatic )
-		//	ComputeHierarchyR( ResourceManager::Get().GetAnimation("idle"), index, &model->nodes[model->rootNode], glm::scale(glm::mat4(1.0), glm::vec3(1.0)));
 
-		//DrawModelR( shader, model, &model->nodes[model->rootNode], true , glm::scale(glm::mat4(1.0),glm::vec3(.5f)));
 	}
 
 	if ( Input::keys[GLFW_KEY_SPACE] ) {
@@ -269,8 +267,8 @@ void Renderer::DrawFrame( std::vector<Entity>& entities, std::vector<Light>& lig
 
 	for ( int i = 0 ;i < entities.size(); i++ )
 		DrawCollider( entities[i] );
-	//DrawCollider( *camera );
 
+	DrawSkyBox();
 }
 
 void Renderer::DrawSkyBox() {
@@ -716,7 +714,7 @@ void Renderer::DrawEntity( Shader* shader, Entity ent , bool shouldTexture) {
 			
 			if ( shouldTexture )
 				BindTextures( mesh );
-#if 0
+#if 1
 			if ( mesh->numIndices != 0 ) {
 				glDrawElements( GL_TRIANGLES, mesh->numIndices, GL_UNSIGNED_SHORT, 0 );
 			}

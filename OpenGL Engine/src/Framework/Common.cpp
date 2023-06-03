@@ -33,14 +33,11 @@ void Common::Init() {
 	renderer = new Renderer;
 	renderer->Init( window, &camera );
 
-#if 0
+#if 1
 	InitGraphicsScene();
 #else
 	InitPhysicsScene();
 #endif
-	lastTime = glfwGetTime();
-	tickRate = 1.0 / 60.0;
-	accum = 0.0;
 }
 
 
@@ -48,41 +45,38 @@ void Common::Frame() {
 
 	while ( !glfwWindowShouldClose( window->GetHandle() ) ) {
 
-		double now = glfwGetTime();
-		accum += ( now - lastTime );
-
-	//	while ( accum > tickRate ) {
-			glfwPollEvents();
-			UpdateInput();
-			PhysicsUpdate();
-			accum -= tickRate;
-		//}
-		
-		//float interp = ( float ) ( accum / tickRate );
-		float interp = 1;
-		renderer->BeginFrame();
-		renderer->DrawFrame( entites, lights);
-		renderer->EndFrame();
-
+		float now = (float) glfwGetTime();
+		deltaTime = now - lastTime;
 		lastTime = now;
+
+		camSpeed = 20.0f;
+
+		glfwPollEvents();
+		UpdateInput();
+		PhysicsUpdate();
+
+		renderer->BeginFrame();
+		renderer->DrawFrame( entites, lights );
+		renderer->EndFrame();
 	}
 }
 
 void Common::PhysicsUpdate() {
+	return;
 	Entity& a = entites[0];
 	Entity& b = entites[1];
-	Entity& c = entites[2];
-	
+	//	Entity& c = entites[2];
+
 	glm::vec3 r = camera.transform.rotation;
 	camera.transform.rotation = glm::vec3( 0 );
 	HitInfo camA{ 0 };
-	camA = TestOBBOBB( camera , a);
+	camA = TestOBBOBB( camera, a );
 
 	//realisitcally i want to dot velocity and normal to get dir i believe
 	if ( camA.hit ) {
 		camera.transform.position += camA.normal * camA.depth;
 	}
-	
+
 	HitInfo camB{ 0 };
 	camB = TestOBBOBB( camera, b );
 
@@ -91,12 +85,10 @@ void Common::PhysicsUpdate() {
 	}
 
 
-	HitInfo floor{ 0 };
-	floor = TestOBBOBB( camera, c );
-
-	if ( floor.hit ) {
-		camera.transform.position += floor.normal * floor.depth;
+	if ( TestOBBOBB( a, b ).hit ) {
+		std::cout << "HIT";
 	}
+
 	camera.transform.rotation = r;
 }
 
@@ -110,7 +102,6 @@ void Common::InitPhysicsScene() {
 	box1Rot[0] = glm::vec3( -sinf( t ), cosf( t ), 0 );
 	box1Rot[1] = glm::vec3( cos( t ), sinf( t ), 0 );
 	box1Rot[2] = glm::vec3( 0, 0, 1 );
-
 
 	camera.transform.SetPosition( glm::vec3( 0, 1, -5 ) );
 	camera.transform.SetRotation( glm::vec3( 0, glm::radians( 90.f ), 0 ) );
@@ -128,16 +119,6 @@ void Common::InitPhysicsScene() {
 	monkey.transform.SetPosition( box2Pos );
 	entites.push_back( monkey );
 
-
-	Entity floor;
-	floor.model.SetRenderModel( ResourceManager::Get().GetModel( "res/models/gltf/prim/cube.gltf" ) );
-	floor.transform.scale = glm::vec3( 10.0f, .1f, 10.0f );
-	floor.transform.position = glm::vec3( 0, 0, 0 );
-	//floor.transform.rotation = glm::vec3( 0, 0, 45.0f );
-
-	entites.push_back( floor );
-
-
 	entites[0].rigidBody.velocity = glm::vec3( .2f, 0, 0 );
 	entites[1].rigidBody.velocity = glm::vec3( 0, 0, 0 );
 }
@@ -151,37 +132,37 @@ void Common::UpdateInput() {
 	camera.rigidBody.angularVelocity = glm::vec3( 0 );
 
 	if ( Input::keys[GLFW_KEY_W] ) {
-		camera.rigidBody.velocity += ( camera.GetForward() * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.velocity += ( camera.GetForward() * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 
 	if ( Input::keys[GLFW_KEY_S] ) {
-		camera.rigidBody.velocity += ( -camera.GetForward() * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.velocity += ( -camera.GetForward() * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 
 	if ( Input::keys[GLFW_KEY_A] ) {
-		camera.rigidBody.velocity += ( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.velocity += ( -glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 	if ( Input::keys[GLFW_KEY_D] ) {
-		camera.rigidBody.velocity += ( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.velocity += ( glm::cross( camera.GetForward(), glm::vec3( 0, 1, 0 ) ) * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 
 	if ( Input::keys[GLFW_KEY_LEFT] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( 0, -.5f, 0.0f ) * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.angularVelocity += ( glm::vec3( 0, -.5f, 0.0f ) * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 
 	if ( Input::keys[GLFW_KEY_RIGHT] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( 0, .5f, 0.0f ) * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.angularVelocity += ( glm::vec3( 0, .5f, 0.0f ) * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 
 	if ( Input::keys[GLFW_KEY_DOWN] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( -.5f, 0, 0.0f ) * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.angularVelocity += ( glm::vec3( -.5f, 0, 0.0f ) * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 
 	if ( Input::keys[GLFW_KEY_UP] ) {
-		camera.rigidBody.angularVelocity += ( glm::vec3( .5f, 0, 0.0f ) * glm::vec3( .1f ) ) * .01f;
+		camera.rigidBody.angularVelocity += ( glm::vec3( .5f, 0, 0.0f ) * glm::vec3( .1f ) ) * camSpeed * deltaTime;;
 	}
 
-	camera.transform.position.y -= 0.25f;
+	//camera.transform.position.y -= 0.25f;
 	camera.transform.position += camera.rigidBody.velocity;
 	camera.transform.rotation += camera.rigidBody.angularVelocity;
 }
@@ -209,12 +190,12 @@ void Common::InitGraphicsScene() {
 
 
 	//Load Skybox
-	//ResourceManager::Get().GetTexture( "res/textures/skybox/back.jpg" );
-	//ResourceManager::Get().GetTexture( "res/textures/skybox/bottom.jpg" );
-	//ResourceManager::Get().GetTexture( "res/textures/skybox/front.jpg" );
-	//ResourceManager::Get().GetTexture( "res/textures/skybox/left.jpg" );
-	//ResourceManager::Get().GetTexture( "res/textures/skybox/right.jpg" );
-	//ResourceManager::Get().GetTexture( "res/textures/skybox/top.jpg" );
+	ResourceManager::Get().GetTexture( "res/textures/skybox/back.jpg" );
+	ResourceManager::Get().GetTexture( "res/textures/skybox/bottom.jpg" );
+	ResourceManager::Get().GetTexture( "res/textures/skybox/front.jpg" );
+	ResourceManager::Get().GetTexture( "res/textures/skybox/left.jpg" );
+	ResourceManager::Get().GetTexture( "res/textures/skybox/right.jpg" );
+	ResourceManager::Get().GetTexture( "res/textures/skybox/top.jpg" );
 
 	Light pointLight = {};
 	pointLight.lType = LIGHT_POINT;
